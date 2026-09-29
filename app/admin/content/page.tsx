@@ -58,11 +58,11 @@ export default function AdminContentPage(){
 
     if(profile?.role==="admin"||profile?.role==="content_reviewer"){
       const [m,l,c,s,q,f]=await Promise.all([
-        supabase.from("modules").select("id,exam_level,exam_area,title,status,tos_weight").order("exam_area").order("sequence"),
-        supabase.from("lessons").select("id,module_id,title,sequence,status,learning_objectives,content,key_takeaways,modules(title,exam_level)").order("sequence"),
-        supabase.from("competencies").select("id,code,title,description,exam_level,exam_area,official_source_id").order("exam_area").order("title"),
+        supabase.from("modules").select("id,exam_level,exam_area,title,status,tos_weight").eq("exam_level","Secondary").order("exam_area").order("sequence"),
+        supabase.from("lessons").select("id,module_id,title,sequence,status,learning_objectives,content,key_takeaways,modules(title,exam_level)").eq("exam_level","Secondary").order("sequence"),
+        supabase.from("competencies").select("id,code,title,description,exam_level,exam_area,official_source_id").eq("exam_level","Secondary").order("exam_area").order("title"),
         supabase.from("sources").select("id,organization,document_title,status").in("status",["verified","published"]).order("organization"),
-        supabase.from("questions").select("id,question,review_status,verified,exam_area,difficulty,modules(title)").order("created_at",{ascending:false}).limit(100),
+        supabase.from("questions").select("id,question,review_status,verified,exam_area,difficulty,modules(title)").eq("exam_level","Secondary").order("created_at",{ascending:false}).limit(100),
         supabase.from("flashcards").select("id,front,back,status,modules(title)").order("created_at",{ascending:false}).limit(100)
       ]);
       setModules((m.data??[]) as ModuleRow[]);
@@ -216,7 +216,7 @@ export default function AdminContentPage(){
         <div>
           <p className="text-sm font-semibold text-indigo-700">Content Review Workspace</p>
           <h1 className="mt-1 text-3xl font-bold">Author, Review, Publish</h1>
-          <p className="mt-2 max-w-3xl text-slate-500">Questions and flashcards can be authored against a verified TOS competency and source. Learners see only content explicitly published after review.</p>
+          <p className="mt-2 max-w-3xl text-slate-500">This build is limited to Secondary LEPT. Questions and flashcards are authored against verified TOS competencies and sources; learners see only published content for their selected Secondary major.</p>
         </div>
         <button onClick={load} className="inline-flex items-center gap-2 rounded-xl border bg-white px-3 py-2 text-sm font-semibold"><RefreshCcw size={15}/> Refresh</button>
       </div>
