@@ -34,6 +34,7 @@ export default async function Study() {
     supabase.from("modules")
       .select("id,title,description,exam_level,exam_area,specialization_id,sequence,estimated_minutes,tos_weight,difficulty,status")
       .eq("status", "published")
+      .eq("exam_level", "Secondary")
       .order("exam_area")
       .order("sequence"),
     supabase.from("module_progress").select("module_id,mastery_score,completed_at").eq("user_id", user.id)
@@ -41,7 +42,7 @@ export default async function Study() {
 
   const progressMap = new Map((progress ?? []).map((p:any) => [p.module_id, p]));
   const visible = (modules ?? []).filter((m:any) =>
-    m.exam_level === profile?.exam_level &&
+    profile?.exam_level === "Secondary" &&
     (m.specialization_id === null || m.specialization_id === profile?.specialization_id)
   );
 
@@ -49,7 +50,7 @@ export default async function Study() {
     <div className="mx-auto max-w-6xl p-5 sm:p-8">
       <p className="text-sm font-semibold text-indigo-700">Published Review Modules</p>
       <h1 className="mt-1 text-3xl font-bold">Your LEPT Learning Path</h1>
-      <p className="mt-2 max-w-2xl text-slate-500">Only reviewed and published modules for your selected LEPT level and specialization appear here.</p>
+      <p className="mt-2 max-w-2xl text-slate-500">This build shows only reviewed and published Secondary LEPT modules for your selected major/specialization.</p>
 
       {visible.length ? <div className="mt-7 grid gap-4 md:grid-cols-2">
         {visible.map((m:any) => {
