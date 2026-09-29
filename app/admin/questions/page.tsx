@@ -7,6 +7,7 @@ import { Card } from "@/components/ui";
 import { createClient } from "@/lib/supabase/client";
 import { ArrowLeft,CheckCircle2,CircleAlert,Pencil,Search,ShieldCheck } from "lucide-react";
 
+type Comp={id:string;code:string|null;title:string;exam_level:string};
 type Q={
   id:string;question:string;choice_a:string;choice_b:string;choice_c:string;choice_d:string;
   correct_answer:string;rationale:string;exam_level:string;exam_area:string;review_status:string;
@@ -19,6 +20,7 @@ export default function QuestionBankPage(){
   const supabase=createClient();
   const [role,setRole]=useState<string|null>(null);
   const [items,setItems]=useState<Q[]>([]);
+  const [competencies,setCompetencies]=useState<Comp[]>([]);
   const [selected,setSelected]=useState<string|null>(null);
   const [checked,setChecked]=useState<string[]>([]);
   const [search,setSearch]=useState("");
@@ -39,11 +41,18 @@ export default function QuestionBankPage(){
     const {data:p}=await supabase.from("profiles").select("role").eq("user_id",user.id).maybeSingle();
     const r=p?.role??"learner"; setRole(r);
     if(r==="admin"||r==="content_reviewer"){
-      const {data,error}=await supabase.from("questions")
-        .select("id,question,choice_a,choice_b,choice_c,choice_d,correct_answer,rationale,exam_level,exam_area,review_status,verified,difficulty,bloom_level,module_id,competency_id,modules(title),competencies(code,title),sources(organization,document_title)")
-        .eq("exam_area","Professional Education").order("created_at",{ascending:false}).limit(500);
-      if(error)setMessage(error.message);
-      const rows=(data??[]) as Q[]; setItems(rows); if(!selected&&rows.length)setSelected(rows[0].id);
+      const [qRes,cRes]=await Promise.all([
+        supabase.from("questions")
+          .select("id,question,choice_a,choice_b,choice_c,choice_d,correct_answer,rationale,exam_level,exam_area,review_status,verified,difficulty,bloom_level,module_id,competency_id,modules(title),competencies(code,title),sources(organization,document_title)")
+          .eq("exam_area","Professional Education").order("created_at",{ascending:false}).limit(500),
+        supabase.from("competencies")
+          .select("id,code,title,exam_level")
+          .eq("exam_area","Professional Education")
+          .order("exam_level").order("code")
+      ]);
+      if(qRes.error)setMessage(qRes.error.message);
+      const rows=(qRes.data??[]) as Q[]; setItems(rows); if(!selected&&rows.length)setSelected(rows[0].id);
+      setCompetencies((cRes.data??[]) as Comp[]);
     }
     setLoading(false);
   }
@@ -57,6 +66,15 @@ export default function QuestionBankPage(){
   }),[items,status,level,search]);
 
   const current=items.find(q=>q.id===selected)??null;
+  const coverage=useMemo(()=>competencies.map(comp=>{
+    const related=items.filter(q=>q.competency_id===comp.id);
+    return {
+      ...comp,
+      total:related.length,
+      verified:related.filter(q=>q.review_status==="verified"||q.review_status==="published").length,
+      published:related.filter(q=>q.review_status==="published"&&q.verified).length
+    };
+  }),[competencies,items]);
   const counts={
     total:items.length,
     review:items.filter(q=>q.review_status==="for_review").length,
@@ -153,5 +171,35 @@ export default function QuestionBankPage(){
         </>}
       </Card>
     </div>
+
+    <Card className="mt-6 overflow-hidden p-0">
+      <div className="border-b p-5">
+        <h2 className="text-lg font-bold">Competency Coverage</h2>
+        <p className="mt-1 text-sm text-slate-500">Use this matrix to find TOS competencies that still need more reviewed and published questions.</p>
+      </div>
+      <div className="max-h-[520px] overflow-auto">
+        <table className="w-full min-w-[760px] text-left text-sm">
+          <thead className="sticky top-0 bg-slate-50 text-xs uppercase text-slate-500">
+            <tr><th className="px-4 py-3">Level</th><th className="px-4 py-3">TOS</th><th className="px-4 py-3">Competency</th><th className="px-4 py-3">Total</th><th className="px-4 py-3">Verified</th><th className="px-4 py-3">Published</th><th className="px-4 py-3">Status</th></tr>
+          </thead>
+          <tbody className="divide-y">
+            {coverage.map(row=><tr key={row.id}>
+              <td className="px-4 py-3">{row.exam_level}</td>
+              <td className="px-4 py-3 font-mono text-xs">{row.code||"—"}</td>
+              <td className="px-4 py-3 font-medium">{row.title}</td>
+              <td className="px-4 py-3">{row.total}</td>
+              <td className="px-4 py-3">{row.verified}</td>
+              <td className="px-4 py-3">{row.published}</td>
+              <td className="px-4 py-3"><span className={"rounded-full px-2.5 py-1 text-xs font-semibold "+(
+                row.total===0?"bg-rose-50 text-rose-700":
+                row.published===0?"bg-amber-50 text-amber-700":
+                row.published<3?"bg-blue-50 text-blue-700":
+                "bg-emerald-50 text-emerald-700"
+              )}>{row.total===0?"No questions":row.published===0?"Needs publishing":row.published<3?"Low coverage":"Covered"}</span></td>
+            </tr>)}
+          </tbody>
+        </table>
+      </div>
+    </Card>
   </div></AppShell>;
 }
