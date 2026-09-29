@@ -1,46 +1,48 @@
 import { spawn } from "node:child_process";
+import { fileURLToPath } from "node:url";
 
 const url = "http://localhost:3000";
-
-const next = spawn(
-  process.platform === "win32" ? "npx.cmd" : "npx",
-  ["next", "dev"],
-  { stdio: "inherit", shell: false }
+const nextBin = fileURLToPath(
+  new URL("../node_modules/next/dist/bin/next", import.meta.url)
 );
 
-function openChrome() {
-  let command;
-  let args;
+const next = spawn(process.execPath, [nextBin, "dev"], {
+  stdio: "inherit"
+});
 
+function openBrowser() {
   if (process.platform === "win32") {
-    command = "cmd";
-    args = ["/c", "start", "", "chrome", url];
-  } else if (process.platform === "darwin") {
-    command = "open";
-    args = ["-a", "Google Chrome", url];
-  } else {
-    command = "google-chrome";
-    args = [url];
+    const opener = spawn("cmd.exe", ["/d", "/s", "/c", "start", "", "chrome", url], {
+      detached: true,
+      stdio: "ignore",
+      windowsHide: true
+    });
+
+    opener.on("error", () => {
+      const fallback = spawn("cmd.exe", ["/d", "/s", "/c", "start", "", url], {
+        detached: true,
+        stdio: "ignore",
+        windowsHide: true
+      });
+      fallback.unref();
+    });
+
+    opener.unref();
+    return;
   }
 
-  const opener = spawn(command, args, {
-    detached: true,
-    stdio: "ignore"
-  });
-
-  opener.on("error", () => {
-    if (process.platform === "win32") {
-      spawn("cmd", ["/c", "start", "", url], {
-        detached: true,
-        stdio: "ignore"
-      }).unref();
-    }
-  });
-
+  const command = process.platform === "darwin" ? "open" : "google-chrome";
+  const args = process.platform === "darwin" ? ["-a", "Google Chrome", url] : [url];
+  const opener = spawn(command, args, { detached: true, stdio: "ignore" });
   opener.unref();
 }
 
-setTimeout(openChrome, 1800);
+setTimeout(openBrowser, 1800);
+
+next.on("error", error => {
+  console.error("Unable to start Next.js:", error);
+  process.exit(1);
+});
 
 next.on("exit", code => {
   process.exit(code ?? 0);
