@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { ExternalLink, ShieldCheck } from "lucide-react";
 
 export default async function Sources() {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: sources } = await supabase
     .from("sources")
     .select("id,organization,document_title,document_type,url,publication_year,date_accessed,last_checked_at,authority_level,notes,status")
