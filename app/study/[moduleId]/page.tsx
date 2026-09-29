@@ -125,14 +125,14 @@ function CompactTable({rows,highlights}:{rows:any[];highlights:HighlightRow[]}){
  </div>;
 }
 
-function ReviewerValue({value,highlights}:{value:any;highlights:HighlightRow[]}){
+function ReviewerValue({value,highlights,depth=0}:{value:any;highlights:HighlightRow[];depth?:number}){
  if(value==null)return null;
  if(typeof value==="string")return <p className="text-[14px] leading-6 text-slate-900"><BoldLead text={value} highlights={highlights}/></p>;
  if(Array.isArray(value)){
   if(value.length&&typeof value[0]==="object"&&!Array.isArray(value[0]))return <CompactTable rows={value} highlights={highlights}/>;
   return <ul className="space-y-1.5 pl-5 text-[14px] leading-6 text-slate-900">{value.map((x,i)=><li key={i} className="list-disc"><BoldLead text={typeof x==="string"?x:JSON.stringify(x)} highlights={highlights}/></li>)}</ul>;
  }
- if(typeof value==="object")return <div className="space-y-2">{Object.entries(value).map(([k,v])=><div key={k}><div className="mb-1 text-[13px] font-bold uppercase tracking-wide text-slate-800">{k.replaceAll("_"," ")}</div><ReviewerValue value={v} highlights={highlights}/></div>)}</div>;
+ if(typeof value==="object")return <div className={depth===0?"space-y-3":"space-y-2"}>{Object.entries(value).map(([k,v])=><div key={k} className={depth===0?"break-inside-avoid":""}><div className={depth===0?"mb-1 text-[14px] font-extrabold underline decoration-slate-400 underline-offset-2 text-slate-950":"mb-1 text-[13px] font-bold text-slate-800"}>{k.replaceAll("_"," ")}</div><ReviewerValue value={v} highlights={highlights} depth={depth+1}/></div>)}</div>;
  return null;
 }
 
@@ -141,7 +141,7 @@ function ReviewerSection({name,value,highlights}:{name:string;value:any;highligh
  const isTrap=name==="common_exam_trap"||name==="common_mistakes";
  const isFocus=name==="lept_focus"||name==="exam_strategy";
  return <section className={"mb-5 break-inside-avoid "+(isTrap||isFocus?"border-l-4 pl-3 ":"")+(isTrap?"border-amber-500":isFocus?"border-indigo-600":"")}>
-  <h3 className="mb-2 border-b border-slate-300 pb-1 text-[15px] font-extrabold tracking-tight text-slate-950">{title}</h3>
+  <h3 className="mb-2 text-[15px] font-extrabold tracking-tight text-slate-950 underline decoration-slate-400 underline-offset-4">{title}</h3>
   <ReviewerValue value={value} highlights={highlights}/>
  </section>;
 }
@@ -151,7 +151,7 @@ function ExamLesson({content,highlights}:{content:any;highlights:HighlightRow[]}
  if(typeof content!=="object"||Array.isArray(content))return <ReviewerValue value={content} highlights={highlights}/>;
  const keys=Object.keys(content);
  const ordered=[...LESSON_ORDER.filter(k=>keys.includes(k)),...keys.filter(k=>!LESSON_ORDER.includes(k))];
- return <div className="columns-1 gap-8 xl:columns-2">{ordered.map(k=><ReviewerSection key={k} name={k} value={content[k]} highlights={highlights}/>)}</div>;
+ return <div className="columns-1 gap-10 xl:columns-2 [column-fill:balance]">{ordered.map(k=><ReviewerSection key={k} name={k} value={content[k]} highlights={highlights}/>)}</div>;
 }
 
 export default function ModuleReader(){
@@ -245,36 +245,52 @@ export default function ModuleReader(){
     {isRizal&&<button disabled={!allDone} onClick={()=>setQuizOpen(true)} className={"mt-3 flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-left text-sm font-semibold "+(allDone?"border-indigo-200 bg-indigo-50 text-indigo-800":"bg-slate-50 text-slate-400")} >{allDone?<Trophy size={18}/>:<LockKeyhole size={18}/>}<span>Module Assessment<span className="block text-xs font-normal">15 LEPT-style items</span></span></button>}
    </Card>
 
-   {!quizOpen&&current?<Card className="overflow-hidden border-slate-300 bg-white p-0 shadow-sm"><div className="border-b border-slate-300 px-6 py-5 sm:px-8"><div className="flex justify-between gap-4"><div><div className="text-xs font-bold uppercase tracking-[0.15em] text-slate-500">Reviewer Sheet • Lesson {current.sequence}</div><h2 className="mt-1 text-2xl font-extrabold tracking-tight text-slate-950">{current.title}</h2></div>{current.estimated_minutes&&<div className="inline-flex items-center gap-2 text-sm text-slate-500"><Clock3 size={16}/>{current.estimated_minutes} min</div>}</div></div><div className="px-6 py-5 sm:px-8">
-    {normalizeList(current.learning_objectives).length>0&&<section className="mb-6 break-inside-avoid"><h3 className="mb-2 border-b border-slate-300 pb-1 text-[15px] font-extrabold text-slate-950">WHAT THIS LESSON PREPARES YOU TO ANSWER</h3><ul className="space-y-1.5 pl-5 text-[14px] leading-6 text-slate-900">{normalizeList(current.learning_objectives).map((x,i)=><li key={i} className="list-disc">{x}</li>)}</ul></section>}
-        {Array.isArray(current.key_terms)&&current.key_terms.length>0&&<section className="mb-6 break-inside-avoid border-2 border-slate-700">
-      <div className="border-b border-slate-700 bg-slate-100 px-3 py-2 text-[15px] font-extrabold text-slate-950">KEY TERMINOLOGIES</div>
-      <div className="grid sm:grid-cols-2">{current.key_terms.map((item:any,i:number)=><div key={i} className="border-b border-slate-300 px-3 py-2 sm:[&:nth-child(odd)]:border-r"><div className="text-[14px] font-bold text-slate-950">{item.term}</div><div className="mt-0.5 text-[13px] leading-5 text-slate-700">{item.definition}</div></div>)}</div>
-    </section>}
+   {!quizOpen&&current?<Card className="overflow-hidden border-slate-300 bg-slate-100 p-0 shadow-sm"><div className="border-b border-slate-300 bg-white px-6 py-4 sm:px-8"><div className="flex justify-between gap-4"><div><div className="text-xs font-bold uppercase tracking-[0.15em] text-slate-500">Reviewer Sheet • Lesson {current.sequence}</div><h2 className="mt-1 text-2xl font-extrabold tracking-tight text-slate-950">{current.title}</h2></div>{current.estimated_minutes&&<div className="inline-flex items-center gap-2 text-sm text-slate-500"><Clock3 size={16}/>{current.estimated_minutes} min</div>}</div></div><div className="px-4 py-4 sm:px-5">
+    <div className="mb-5 grid gap-3 md:grid-cols-2">
+      <details className="border border-slate-300 bg-slate-50">
+        <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm font-extrabold text-slate-950"><Highlighter size={16}/> HIGHLIGHTS <span className="ml-auto text-xs font-medium text-slate-500">{highlights.length} saved</span></summary>
+        <div className="border-t border-slate-300 p-4">
+          <p className="text-xs text-slate-500">Select text inside the reviewer sheet, then save the highlight here.</p>
+          {selectedText&&<div className="mt-3 border bg-white p-3">
+            <div className="line-clamp-2 text-sm text-slate-700">“{selectedText}”</div>
+            <div className="mt-3 flex flex-wrap items-center gap-2">{(["yellow","green","blue","pink"] as const).map(color=><button key={color} onClick={()=>setHighlightColor(color)} className={"h-7 w-7 border "+HIGHLIGHT_CLASS[color]+(highlightColor===color?" ring-2 ring-indigo-500":"")} aria-label={color+" highlight"}/>)}
+            <button onClick={saveHighlight} className="ml-1 bg-indigo-700 px-3 py-1.5 text-xs font-semibold text-white">Save highlight</button></div>
+          </div>}
+          {highlights.length>0&&<div className="mt-3 space-y-2">{highlights.map(h=><div key={h.id} className="flex items-start gap-2 border bg-white p-2 text-xs"><span className={"mt-0.5 h-4 w-1.5 shrink-0 "+HIGHLIGHT_CLASS[h.color]}/><span className="line-clamp-2 flex-1 text-slate-700">{h.selected_text}</span><button onClick={()=>removeHighlight(h.id)} className="text-slate-400 hover:text-rose-600"><Trash2 size={14}/></button></div>)}</div>}
+        </div>
+      </details>
 
-    <section className="mb-6 border border-slate-300 bg-slate-50 p-4">
-      <div className="flex items-center gap-2 text-[15px] font-extrabold text-slate-950"><Highlighter size={17}/> HIGHLIGHT TOOL</div>
-      <p className="mt-1 text-xs text-slate-500">Select any text in the reviewer below. Your saved highlights are private to your account.</p>
-      {selectedText&&<div className="mt-3 rounded-lg border bg-white p-3">
-        <div className="line-clamp-2 text-sm text-slate-700">“{selectedText}”</div>
-        <div className="mt-3 flex flex-wrap items-center gap-2">{(["yellow","green","blue","pink"] as const).map(color=><button key={color} onClick={()=>setHighlightColor(color)} className={"h-7 w-7 rounded border "+HIGHLIGHT_CLASS[color]+(highlightColor===color?" ring-2 ring-indigo-500":"")} aria-label={color+" highlight"}/>)}
-        <button onClick={saveHighlight} className="ml-1 rounded-lg bg-indigo-700 px-3 py-1.5 text-xs font-semibold text-white">Save highlight</button></div>
-      </div>}
-      {highlights.length>0&&<div className="mt-3 space-y-2">{highlights.map(h=><div key={h.id} className="flex items-start gap-2 rounded border bg-white p-2 text-xs"><span className={"mt-0.5 h-4 w-1.5 shrink-0 rounded "+HIGHLIGHT_CLASS[h.color]}/><span className="line-clamp-2 flex-1 text-slate-700">{h.selected_text}</span><button onClick={()=>removeHighlight(h.id)} className="text-slate-400 hover:text-rose-600" aria-label="Remove highlight"><Trash2 size={14}/></button></div>)}</div>}
-    </section>
+      <details className="border border-slate-300 bg-slate-50">
+        <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm font-extrabold text-slate-950"><StickyNote size={16}/> MY NOTES <span className="ml-auto text-xs font-medium text-slate-500">{noteText.trim()?"saved for this lesson":"optional"}</span></summary>
+        <div className="border-t border-slate-300 p-4">
+          <textarea value={noteText} onChange={e=>setNoteText(e.target.value)} disabled={!signedIn} placeholder={signedIn?"Write mnemonics, reminders, questions, or your own reviewer notes...":"Sign in to save notes."} className="min-h-28 w-full resize-y border border-slate-300 bg-white p-3 text-sm leading-6 outline-none focus:border-indigo-500"/>
+          <div className="mt-2 flex justify-end"><button onClick={saveNote} disabled={!signedIn||noteSaving} className="inline-flex items-center gap-2 bg-slate-900 px-3 py-2 text-xs font-semibold text-white disabled:opacity-40"><Save size={14}/>{noteSaving?"Saving...":"Save note"}</button></div>
+        </div>
+      </details>
+    </div>
 
-    <section className="mb-6 border border-slate-300 p-4">
-      <div className="flex items-center gap-2 text-[15px] font-extrabold text-slate-950"><StickyNote size={17}/> MY NOTES</div>
-      <p className="mt-1 text-xs text-slate-500">Your note is saved only to this lesson and only visible to your account.</p>
-      <textarea value={noteText} onChange={e=>setNoteText(e.target.value)} disabled={!signedIn} placeholder={signedIn?"Write your own reviewer notes, mnemonics, reminders, or questions here...":"Sign in to save lesson notes."} className="mt-3 min-h-28 w-full resize-y rounded-lg border border-slate-300 bg-white p-3 text-sm leading-6 outline-none focus:border-indigo-500"/>
-      <div className="mt-2 flex justify-end"><button onClick={saveNote} disabled={!signedIn||noteSaving} className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white disabled:opacity-40"><Save size={14}/>{noteSaving?"Saving...":"Save note"}</button></div>
-    </section>
+    <div id="reviewer-content" onMouseUp={captureSelection} className="border border-slate-300 bg-white p-5 sm:p-6">
+      <div className="mb-5 flex items-center justify-between border-b-2 border-slate-900 pb-2">
+        <div>
+          <div className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-slate-500">LEPT REVIEW MATERIAL</div>
+          <div className="text-lg font-extrabold text-slate-950">{current.title}</div>
+        </div>
+        <div className="text-right text-xs text-slate-500">Lesson {current.sequence}<br/>{current.estimated_minutes??30} min</div>
+      </div>
 
-    <div id="reviewer-content" onMouseUp={captureSelection}>
+      <div className="mb-6 border border-slate-400">
+        <div className="border-b border-slate-400 bg-slate-100 px-3 py-2 text-[14px] font-extrabold text-slate-950">WHAT THIS LESSON PREPARES YOU TO ANSWER</div>
+        <ul className="space-y-1 px-5 py-3 text-[13px] leading-5 text-slate-900">{normalizeList(current.learning_objectives).map((x,i)=><li key={i} className="list-disc">{x}</li>)}</ul>
+      </div>
 
-    <section>
+      {Array.isArray(current.key_terms)&&current.key_terms.length>0&&<section className="mb-6 break-inside-avoid">
+        <h3 className="mb-2 text-[15px] font-extrabold text-slate-950 underline decoration-slate-400 underline-offset-4">KEY TERMINOLOGIES</h3>
+        <div className="overflow-hidden border border-slate-400">
+          <table className="w-full border-collapse text-[13px] leading-5"><tbody>{current.key_terms.map((item:any,i:number)=><tr key={i}><td className="w-[30%] border-b border-r border-slate-300 bg-slate-50 px-3 py-2 align-top font-bold text-slate-950">{item.term}</td><td className="border-b border-slate-300 px-3 py-2 align-top text-slate-800">{item.definition}</td></tr>)}</tbody></table>
+        </div>
+      </section>}
+
       <ExamLesson content={current.content} highlights={highlights}/>
-    </section>
     </div>
     {normalizeList(current.key_takeaways).length>0&&<section className="mt-6 border-2 border-slate-700 p-4"><h3 className="mb-2 text-[15px] font-extrabold text-slate-950">QUICK RECALL — REMEMBER THESE</h3><ul className="space-y-1.5 pl-5 text-[14px] leading-6 text-slate-900">{normalizeList(current.key_takeaways).map((x,i)=><li key={i} className="list-disc">{x}</li>)}</ul></section>}
     <div className="mt-7 flex justify-end border-t border-slate-300 pt-5"><button disabled={!!progressMap.get(current.id)?.completed_at} onClick={()=>markComplete(current.id)} className="rounded-lg bg-indigo-700 px-4 py-2.5 text-sm font-semibold text-white disabled:bg-emerald-600">{progressMap.get(current.id)?.completed_at?"Completed":"Mark Lesson Complete"}</button></div>
