@@ -22,6 +22,10 @@ type Mistake = {
   rationale: string;
   exam_area: string;
   competency_title: string | null;
+  module_id: string | null;
+  module_title: string | null;
+  lesson_id: string | null;
+  lesson_title: string | null;
 };
 
 export default function Mistakes() {
@@ -72,7 +76,7 @@ export default function Mistakes() {
           const choices:any = { A:item.choice_a, B:item.choice_b, C:item.choice_c, D:item.choice_d };
           return <Card key={item.question_id}>
             <div className="flex flex-wrap items-start justify-between gap-3">
-              <div className="text-xs font-semibold uppercase tracking-wide text-indigo-600">{item.exam_area} • {item.competency_title || "Competency"}</div>
+              <div className="text-xs font-semibold uppercase tracking-wide text-indigo-600">{item.exam_area} • {item.module_title || item.competency_title || "Competency"}</div>
               <span className={
                 "rounded-full px-2.5 py-1 text-xs font-semibold capitalize " +
                 (item.status==="mastered" ? "bg-emerald-50 text-emerald-700" :
@@ -89,6 +93,7 @@ export default function Mistakes() {
             </div>
 
             <p className="mt-4 text-sm leading-6 text-slate-600">{item.rationale}</p>
+            {item.module_id&&item.lesson_id&&<div className="mt-4"><Link href={"/study/"+item.module_id+"?lesson="+item.lesson_id} className="inline-flex items-center gap-2 text-sm font-semibold text-indigo-700"><BookOpenCheck size={15}/> Review {item.lesson_title||"linked lesson"}</Link></div>}
 
             <div className="mt-4 flex flex-wrap gap-x-5 gap-y-1 text-xs text-slate-500">
               <span>Correct retry streak: {item.correct_streak}</span>
