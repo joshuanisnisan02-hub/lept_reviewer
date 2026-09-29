@@ -51,7 +51,7 @@ export default function QuestionBankPage(){
           .order("code")
       ]);
       if(qRes.error)setMessage(qRes.error.message);
-      const rows=(qRes.data??[]) as Q[]; setItems(rows); if(!selected&&rows.length)setSelected(rows[0].id);
+      const rows=(qRes.data??[]).map((row:any)=>({...row,modules:Array.isArray(row.modules)?(row.modules[0]??null):row.modules,competencies:Array.isArray(row.competencies)?(row.competencies[0]??null):row.competencies,sources:Array.isArray(row.sources)?(row.sources[0]??null):row.sources})) as Q[]; setItems(rows); if(!selected&&rows.length)setSelected(rows[0].id);
       setCompetencies((cRes.data??[]) as Comp[]);
     }
     setLoading(false);
