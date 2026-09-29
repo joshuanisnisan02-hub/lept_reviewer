@@ -2,7 +2,7 @@ import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
 import { Card } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
-import { ArrowRight, BookOpenCheck, BookText, GraduationCap, Wrench } from "lucide-react";
+import { ArrowRight, BookText, GraduationCap, MonitorCog } from "lucide-react";
 
 export default async function Study() {
   const supabase = await createClient();
@@ -10,104 +10,112 @@ export default async function Study() {
 
   if (!user) {
     return <AppShell><div className="mx-auto max-w-6xl p-5 sm:p-8">
-      <p className="text-sm font-semibold text-indigo-700">Secondary LEPT</p>
-      <h1 className="mt-1 text-3xl font-bold">Your Learning Path</h1>
+      <h1 className="text-3xl font-bold">Your LEPT Learning Path</h1>
       <Card className="mt-7">
         <h2 className="font-bold">Sign in required</h2>
-        <p className="mt-2 text-sm leading-6 text-slate-600">Sign in to access your General Education, Professional Education, and Major review modules.</p>
-        <Link href="/auth" className="mt-5 inline-flex items-center gap-2 rounded-xl bg-indigo-700 px-4 py-2.5 text-sm font-semibold text-white">Sign In <ArrowRight size={16}/></Link>
+        <p className="mt-2 text-sm text-slate-600">Sign in to access the Secondary LEPT reviewer.</p>
+        <Link href="/auth" className="mt-5 inline-flex rounded-xl bg-indigo-700 px-4 py-2.5 text-sm font-semibold text-white">Sign In</Link>
       </Card>
     </div></AppShell>;
   }
 
-  const [{ data: profile }, { data: modules }, { data: progress }] = await Promise.all([
-    supabase.from("profiles").select("exam_level,specialization_id,program,specializations(name)").eq("user_id", user.id).maybeSingle(),
+  const [
+    { data: modules },
+    { data: progress },
+    { data: ictSpec }
+  ] = await Promise.all([
     supabase.from("modules")
-      .select("id,title,description,exam_level,exam_area,specialization_id,sequence,estimated_minutes,tos_weight,difficulty,status")
+      .select("id,title,description,exam_area,specialization_id,sequence,estimated_minutes,tos_weight,difficulty,status")
       .eq("exam_level","Secondary")
       .eq("status","published")
       .order("exam_area")
       .order("sequence"),
-    supabase.from("module_progress").select("module_id,mastery_score,completed_at").eq("user_id", user.id)
+    supabase.from("module_progress")
+      .select("module_id,mastery_score,completed_at")
+      .eq("user_id", user.id),
+    supabase.from("specializations")
+      .select("id,name")
+      .eq("exam_level","Secondary")
+      .eq("name","Information and Communication Technology")
+      .maybeSingle()
   ]);
 
   const progressMap = new Map((progress ?? []).map((p:any)=>[p.module_id,p]));
-  const visible = (modules ?? []).filter((m:any)=>m.specialization_id===null || m.specialization_id===profile?.specialization_id);
+  const all = modules ?? [];
+  const genEd = all.filter((m:any)=>m.exam_area==="General Education" && m.specialization_id===null);
+  const profEd = all.filter((m:any)=>m.exam_area==="Professional Education" && m.specialization_id===null);
+  const ict = all.filter((m:any)=>m.exam_area==="Specialization" && m.specialization_id===ictSpec?.id);
 
-  const specializationName = (profile as any)?.specializations?.name ?? profile?.program ?? "Major / Specialization";
-
-  const sections = [
+  const categories = [
     {
-      key:"General Education",
+      key:"ge",
       title:"General Education",
-      description:"Core Secondary LEPT general education review modules.",
+      subtitle:"Core Category 1",
+      description:"Secondary LEPT General Education modules.",
       icon:BookText,
-      items:visible.filter((m:any)=>m.exam_area==="General Education")
+      items:genEd
     },
     {
-      key:"Professional Education",
+      key:"pe",
       title:"Professional Education",
-      description:"Teaching profession, curriculum, learners, assessment, field study, research, and teaching internship.",
+      subtitle:"Core Category 2",
+      description:"Teaching foundations, curriculum, learners, assessment, field study, and professional practice.",
       icon:GraduationCap,
-      items:visible.filter((m:any)=>m.exam_area==="Professional Education")
+      items:profEd
     },
     {
-      key:"Specialization",
-      title:specializationName+" Major",
-      description:"Review modules matched to the major or specialization saved in your learner account.",
-      icon:Wrench,
-      items:visible.filter((m:any)=>m.exam_area==="Specialization")
+      key:"ict",
+      title:"Major in ICT",
+      subtitle:"Core Category 3",
+      description:"ICT-focused TLE/Tech-Voc review aligned to the current PRC TOS and CHED BTLEd-ICT curriculum.",
+      icon:MonitorCog,
+      items:ict
     }
   ];
 
-  return <AppShell><div className="mx-auto max-w-6xl p-5 sm:p-8">
-    <p className="text-sm font-semibold text-indigo-700">Secondary LEPT</p>
+  return <AppShell><div className="mx-auto max-w-7xl p-5 sm:p-8">
+    <p className="text-sm font-semibold text-indigo-700">Secondary LEPT • ICT Focus</p>
     <h1 className="mt-1 text-3xl font-bold">Your Learning Path</h1>
-    <p className="mt-2 max-w-3xl text-slate-500">Study General Education, Professional Education, and your selected Major. Complete the lessons, then take each module assessment.</p>
+    <p className="mt-2 max-w-3xl text-slate-500">Choose one of the three core categories. Each category contains the modules you need to read, complete, and assess.</p>
 
-    <div className="mt-8 space-y-12">
-      {sections.map(section=>{
-        const Icon=section.icon;
-        return <section key={section.key}>
+    <div className="mt-8 grid gap-5 xl:grid-cols-3">
+      {categories.map(category=>{
+        const Icon=category.icon;
+        return <Card key={category.key} className="flex min-h-[520px] flex-col">
           <div className="flex items-start gap-3">
-            <div className="grid size-11 shrink-0 place-items-center rounded-xl bg-indigo-50 text-indigo-700"><Icon size={21}/></div>
+            <div className="grid size-11 shrink-0 place-items-center rounded-xl bg-indigo-50 text-indigo-700"><Icon size={22}/></div>
             <div>
-              <h2 className="text-xl font-bold">{section.title}</h2>
-              <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-500">{section.description}</p>
+              <div className="text-xs font-semibold uppercase tracking-wide text-indigo-600">{category.subtitle}</div>
+              <h2 className="mt-1 text-xl font-bold">{category.title}</h2>
+              <p className="mt-2 text-sm leading-6 text-slate-500">{category.description}</p>
             </div>
           </div>
 
-          {section.items.length ? <div className="mt-5 grid gap-4 md:grid-cols-2">
-            {section.items.map((m:any)=>{
-              const p:any=progressMap.get(m.id);
-              const mastery=Math.round(Number(p?.mastery_score ?? 0));
-              return <Card key={m.id}>
-                <div className="flex items-center justify-between gap-3">
-                  <div className="text-xs font-semibold uppercase tracking-wide text-indigo-600">Module {String(m.sequence ?? 1).padStart(2,"0")}</div>
-                  {p?.completed_at && <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">Completed</span>}
-                </div>
-                <h3 className="mt-2 text-lg font-bold">{m.title}</h3>
-                {m.description && <p className="mt-2 text-sm leading-6 text-slate-600">{m.description}</p>}
-                <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
-                  {m.estimated_minutes && <span>{m.estimated_minutes} min</span>}
-                  {m.tos_weight != null && <span>TOS weight {Number(m.tos_weight)}%</span>}
-                  {m.difficulty && <span className="capitalize">{m.difficulty}</span>}
-                </div>
-                <div className="mt-4 flex items-center justify-between text-xs"><span className="text-slate-500">Module mastery</span><span className="font-semibold">{mastery}%</span></div>
-                <div className="mt-1 h-2 rounded-full bg-slate-100"><div className="h-2 rounded-full bg-indigo-600" style={{width:Math.min(mastery,100)+"%"}}/></div>
-                <Link href={"/study/"+m.id} className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-indigo-700">Open module <ArrowRight size={15}/></Link>
-              </Card>
-            })}
-          </div> : <Card className="mt-5 border-dashed shadow-none">
-            <div className="flex items-start gap-3">
-              <BookOpenCheck className="mt-0.5 shrink-0 text-indigo-600"/>
-              <div>
-                <h3 className="font-bold">{section.key==="Specialization" ? "Major modules for this account are still being prepared." : "No published modules yet."}</h3>
-                <p className="mt-2 text-sm leading-6 text-slate-600">Published review modules will appear here automatically when available.</p>
-              </div>
+          <div className="mt-5 border-t pt-4">
+            <div className="mb-3 flex items-center justify-between text-xs font-semibold uppercase text-slate-400">
+              <span>Modules</span><span>{category.items.length}</span>
             </div>
-          </Card>}
-        </section>;
+            <div className="space-y-3">
+              {category.items.length ? category.items.map((m:any)=>{
+                const p:any=progressMap.get(m.id);
+                const mastery=Math.round(Number(p?.mastery_score ?? 0));
+                return <Link key={m.id} href={"/study/"+m.id} className="block rounded-xl border p-4 transition hover:border-indigo-300 hover:bg-indigo-50/40">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="text-xs font-semibold text-indigo-600">Module {String(m.sequence ?? 1).padStart(2,"0")}</div>
+                    {p?.completed_at && <span className="text-xs font-semibold text-emerald-700">Completed</span>}
+                  </div>
+                  <div className="mt-1 font-semibold leading-6">{m.title}</div>
+                  <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500">
+                    {m.estimated_minutes && <span>{m.estimated_minutes} min</span>}
+                    {m.tos_weight != null && <span>TOS {Number(m.tos_weight)}%</span>}
+                    <span>{mastery}% mastery</span>
+                  </div>
+                  <div className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-indigo-700">Open module <ArrowRight size={13}/></div>
+                </Link>
+              }) : <div className="rounded-xl border border-dashed p-4 text-sm text-slate-500">Modules are being prepared.</div>}
+            </div>
+          </div>
+        </Card>;
       })}
     </div>
   </div></AppShell>;
