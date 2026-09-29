@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 import { Card } from "@/components/ui";
 import { createClient } from "@/lib/supabase/client";
@@ -196,7 +196,7 @@ export default function ModuleReader(){
    supabase.from("modules").select("id,title,description,exam_area,estimated_minutes,tos_weight").eq("id",moduleId).eq("status","published").maybeSingle(),
    supabase.from("lessons").select("id,title,sequence,learning_objectives,content,key_takeaways,key_terms,estimated_minutes").eq("module_id",moduleId).eq("status","published").order("sequence")
   ]);
-  setModule(mr.data as ModuleRow|null);const rows=(lr.data??[]) as LessonRow[];setLessons(rows);setActiveLesson(rows[0]?.id??null);
+  setModule(mr.data as ModuleRow|null);const rows=(lr.data??[]) as LessonRow[];setLessons(rows);setActiveLesson(rows.find(x=>x.id===requestedLesson)?.id??rows[0]?.id??null);
   if(user&&rows.length){const {data}=await supabase.from("lesson_progress").select("lesson_id,status,progress_percent,completed_at").eq("user_id",user.id).in("lesson_id",rows.map(x=>x.id));setProgress((data??[]) as ProgressRow[])}
   setLoading(false);
  }
@@ -266,11 +266,11 @@ export default function ModuleReader(){
   {!signedIn&&<div className="mt-5 rounded-xl bg-amber-50 p-3 text-sm text-amber-800">Sign in to save lesson completion and unlock assessments.</div>}
 
   <div className="mt-7 grid gap-6 lg:grid-cols-[300px_1fr]">
-   <Card className="sticky top-5 h-fit p-3"><div className="px-2 pb-3 pt-1 text-sm font-bold">Module Journey</div><div className="space-y-1">{lessons.map(l=>{const done=!!progressMap.get(l.id)?.completed_at;return <button key={l.id} onClick={()=>{setActiveLesson(l.id)}} className={"flex w-full items-start gap-3 rounded-xl px-3 py-3 text-left text-sm "+(activeLesson===l.id&&!quizOpen?"bg-indigo-50 text-indigo-800":"hover:bg-slate-50")}>{done?<CheckCircle2 size={17} className="mt-0.5 shrink-0 text-emerald-600"/>:<Circle size={17} className="mt-0.5 shrink-0 text-slate-300"/>}<span><span className="block text-xs text-slate-400">Lesson {l.sequence}</span><span className="font-medium">{l.title}</span></span></button>})}</div>
+   <Card className="sticky top-5 h-fit p-3"><div className="px-2 pb-3 pt-1 text-sm font-bold">Module Journey</div><div className="space-y-1">{lessons.map(l=>{const done=!!progressMap.get(l.id)?.completed_at;return <button key={l.id} onClick={()=>{setActiveLesson(l.id)}} className={"flex w-full items-start gap-3 rounded-xl px-3 py-3 text-left text-sm "+(activeLesson===l.id?"bg-indigo-50 text-indigo-800":"hover:bg-slate-50")}>{done?<CheckCircle2 size={17} className="mt-0.5 shrink-0 text-emerald-600"/>:<Circle size={17} className="mt-0.5 shrink-0 text-slate-300"/>}<span><span className="block text-xs text-slate-400">Lesson {l.sequence}</span><span className="font-medium">{l.title}</span></span></button>})}</div>
     {allDone?<Link href={"/assessment/module/"+module.id} className="mt-3 flex w-full items-center gap-3 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-3 text-left text-sm font-semibold text-indigo-800"><Trophy size={18}/><span>Module Assessment<span className="block text-xs font-normal">TOS-aligned LEPT-style items</span></span></Link>:<div className="mt-3 flex w-full items-center gap-3 rounded-xl border bg-slate-50 px-3 py-3 text-left text-sm font-semibold text-slate-400"><LockKeyhole size={18}/><span>Module Assessment<span className="block text-xs font-normal">Complete all lessons to unlock</span></span></div>}
    </Card>
 
-   {!quizOpen&&current?<Card className="overflow-hidden border-slate-300 bg-slate-100 p-0 shadow-sm"><div className="border-b border-slate-300 bg-white px-6 py-4 sm:px-8"><div className="flex justify-between gap-4"><div><div className="text-xs font-bold uppercase tracking-[0.15em] text-slate-500">Reviewer Sheet • Lesson {current.sequence}</div><h2 className="mt-1 text-2xl font-extrabold tracking-tight text-slate-950">{current.title}</h2></div>{current.estimated_minutes&&<div className="inline-flex items-center gap-2 text-sm text-slate-500"><Clock3 size={16}/>{current.estimated_minutes} min</div>}</div></div><div className="px-4 py-4 sm:px-5">
+   {current?<Card className="overflow-hidden border-slate-300 bg-slate-100 p-0 shadow-sm"><div className="border-b border-slate-300 bg-white px-6 py-4 sm:px-8"><div className="flex justify-between gap-4"><div><div className="text-xs font-bold uppercase tracking-[0.15em] text-slate-500">Reviewer Sheet • Lesson {current.sequence}</div><h2 className="mt-1 text-2xl font-extrabold tracking-tight text-slate-950">{current.title}</h2></div>{current.estimated_minutes&&<div className="inline-flex items-center gap-2 text-sm text-slate-500"><Clock3 size={16}/>{current.estimated_minutes} min</div>}</div></div><div className="px-4 py-4 sm:px-5">
     <div className="mb-5 grid gap-3 md:grid-cols-2">
       <details className="border border-slate-300 bg-slate-50">
         <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm font-extrabold text-slate-950"><Highlighter size={16}/> HIGHLIGHTS <span className="ml-auto text-xs font-medium text-slate-500">{highlights.length} saved</span></summary>
