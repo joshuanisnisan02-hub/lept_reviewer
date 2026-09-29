@@ -42,8 +42,37 @@ export default function Onboarding() {
     [specializations, level]
   );
 
+  const selectedParent = useMemo(
+    () => options.find(x => x.name === program) ?? null,
+    [options, program]
+  );
+
+  const childOptions = useMemo(() => {
+    if (!selectedParent) return [];
+    if (selectedParent.name === "Technology and Livelihood Education") {
+      return specializations.filter(x => x.parent_id === selectedParent.id);
+    }
+    if (selectedParent.name === "Legacy MAPEH") {
+      return specializations.filter(x =>
+        x.exam_level === "Secondary" &&
+        ["Culture and Arts Education","Physical Education"].includes(x.name)
+      );
+    }
+    return [];
+  }, [selectedParent, specializations]);
+
+  function selectProgram(x: Specialization) {
+    setProgram(x.name);
+    const children = x.name === "Technology and Livelihood Education"
+      ? specializations.filter(s => s.parent_id === x.id)
+      : x.name === "Legacy MAPEH"
+        ? specializations.filter(s => s.exam_level === "Secondary" && ["Culture and Arts Education","Physical Education"].includes(s.name))
+        : [];
+    setSpecializationId(children.length ? null : x.id);
+  }
+
   async function finish() {
-    if (!level || !program) return;
+    if (!level || !program || !specializationId) return;
     setSaving(true);
     setNotice("");
 
@@ -77,7 +106,7 @@ export default function Onboarding() {
 
   function canContinue() {
     if (step === 1) return !!level;
-    if (step === 2) return !!program;
+    if (step === 2) return !!program && !!specializationId;
     return true;
   }
 
@@ -117,14 +146,23 @@ export default function Onboarding() {
 
         {step === 2 && <>
           <h2 className="text-2xl font-bold">Program / Specialization</h2>
-          <p className="mt-2 text-slate-500">Choose the option that best matches your current LEPT preparation track.</p>
+          <p className="mt-2 text-slate-500">Choose the option that matches the field you will actually take in the LEPT.</p>
+
           <div className="mt-6 grid gap-3 sm:grid-cols-2">
-            {options.map(x => <button key={x.id} onClick={() => { setProgram(x.name); setSpecializationId(x.id); }} className={"rounded-xl border p-4 text-left transition " + (specializationId === x.id ? "border-indigo-600 bg-indigo-50 ring-1 ring-indigo-600" : "hover:border-slate-300")}>
+            {options.map(x => <button key={x.id} onClick={() => selectProgram(x)} className={"rounded-xl border p-4 text-left transition " + (program === x.name ? "border-indigo-600 bg-indigo-50 ring-1 ring-indigo-600" : "hover:border-slate-300")}>
               <div className="font-semibold">{x.name}</div>
               {x.code && <div className="mt-1 text-xs text-slate-500">{x.code}</div>}
               {x.guidance && <div className="mt-2 text-xs leading-5 text-amber-700">{x.guidance}</div>}
             </button>)}
           </div>
+
+          {childOptions.length > 0 && <div className="mt-6 rounded-2xl border bg-slate-50 p-5">
+            <div className="font-semibold">Choose your actual field</div>
+            <p className="mt-1 text-sm text-slate-500">{program === "Technology and Livelihood Education" ? "TLE review coverage must follow the area you will take." : "Legacy MAPEH examinees should select the current field they will take."}</p>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              {childOptions.map(x => <button key={x.id} onClick={() => setSpecializationId(x.id)} className={"rounded-xl border bg-white p-3 text-left text-sm font-medium " + (specializationId === x.id ? "border-indigo-600 bg-indigo-50 ring-1 ring-indigo-600" : "")}>{x.name}</button>)}
+            </div>
+          </div>}
         </>}
 
         {step === 3 && <>
@@ -145,7 +183,7 @@ export default function Onboarding() {
         {step === 5 && <>
           <div className="grid size-14 place-items-center rounded-full bg-emerald-50 text-emerald-600"><CheckCircle2 /></div>
           <h2 className="mt-5 text-2xl font-bold">Your review path is ready.</h2>
-          <p className="mt-3 text-slate-600">{level} • {program}</p>
+          <p className="mt-3 text-slate-600">{level} • {specializations.find(x => x.id === specializationId)?.name || program}</p>
           {notice && <div className="mt-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-800">{notice}</div>}
           <div className="mt-6 grid gap-3 sm:grid-cols-2">
             <button onClick={() => router.push("/practice?mode=diagnostic")} className="rounded-xl bg-indigo-700 px-4 py-3 font-semibold text-white">Take Diagnostic</button>
