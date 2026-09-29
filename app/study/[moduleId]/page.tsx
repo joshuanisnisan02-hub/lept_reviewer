@@ -38,7 +38,7 @@ const LESSON_ORDER=[
  "exam_coverage","overview","must_know","core_discussion","principles","reading_skills","source_use","argumentation",
  "purpose_audience_context","tone_and_register","formats","email_structure","special_purpose_principles","audience_adaptation",
  "evaluation_questions","fact_opinion_inference","digital_communication","process_flow","format_guide","message_checklist","audience_matrix","source_check","argument_check","before_after","timeline","chronology","key_dates","worked_examples",
- "worked_example","examples","example","compare_and_distinguish","common_exam_trap","common_mistakes","lept_focus","exam_strategy"
+ "worked_example","examples","example","compare_and_distinguish","review_checklist","common_exam_trap","common_mistakes","lept_focus","exam_strategy"
 ];
 
 const SECTION_TITLES:Record<string,string>={
@@ -66,6 +66,7 @@ const SECTION_TITLES:Record<string,string>={
  source_check:"SOURCE CHECK",
  argument_check:"ARGUMENT CHECK",
  before_after:"BEFORE vs BETTER",
+ review_checklist:"SELF-CHECK BEFORE MOVING ON",
  timeline:"TIMELINE",
  chronology:"CHRONOLOGY",
  key_dates:"KEY DATES",
