@@ -24,15 +24,17 @@ export default async function Dashboard() {
   let attempts = 0;
   let completedModules = 0;
   let masteredCards = 0;
+  let latestDiagnostic: any = null;
 
   if (user) {
-    const [profileRes, planRes, masteryRes, attemptsRes, modulesRes, cardsRes] = await Promise.all([
-      supabase.from("profiles").select("full_name,exam_level,program,target_exam_date,daily_study_minutes,onboarding_completed,specializations(name)").eq("user_id", user.id).maybeSingle(),
+    const [profileRes, planRes, masteryRes, attemptsRes, modulesRes, cardsRes, diagnosticRes] = await Promise.all([
+      supabase.from("profiles").select("full_name,exam_level,program,target_exam_date,daily_study_minutes,onboarding_completed,diagnostic_completed,specializations(name)").eq("user_id", user.id).maybeSingle(),
       supabase.from("study_plan_items").select("id,title,estimated_minutes,status,item_type").eq("user_id", user.id).eq("scheduled_date", manilaDate()).order("priority", { ascending: false }),
       supabase.from("competency_mastery").select("mastery_score,competencies(title,tos_weight)").eq("user_id", user.id).order("mastery_score", { ascending: true }).limit(5),
       supabase.from("question_attempts").select("id", { count: "exact", head: true }).eq("user_id", user.id),
       supabase.from("module_progress").select("module_id", { count: "exact", head: true }).eq("user_id", user.id).not("completed_at", "is", null),
-      supabase.from("flashcard_reviews").select("flashcard_id", { count: "exact", head: true }).eq("user_id", user.id).gte("repetitions", 3)
+      supabase.from("flashcard_reviews").select("flashcard_id", { count: "exact", head: true }).eq("user_id", user.id).gte("repetitions", 3),
+      supabase.from("assessment_sessions").select("id,score_percent,completed_at,status").eq("user_id", user.id).eq("assessment_type","diagnostic").eq("status","completed").order("completed_at",{ascending:false}).limit(1).maybeSingle()
     ]);
     profile = profileRes.data;
     plan = planRes.data ?? [];
@@ -40,6 +42,7 @@ export default async function Dashboard() {
     attempts = attemptsRes.count ?? 0;
     completedModules = modulesRes.count ?? 0;
     masteredCards = cardsRes.count ?? 0;
+    latestDiagnostic = diagnosticRes.data;
   }
 
   const signedIn = !!user;
@@ -81,7 +84,7 @@ export default async function Dashboard() {
       <div className="mt-7 grid gap-5 xl:grid-cols-[1.25fr_.75fr]">
         <Card>
           <div className="text-sm font-semibold text-indigo-700">Recommended Next</div>
-          {signedIn && readiness === 0 ? <>
+          {signedIn && !profile?.diagnostic_completed ? <>
             <h2 className="mt-2 text-2xl font-bold">Take your diagnostic assessment</h2>
             <p className="mt-2 max-w-2xl text-slate-600">Your mastery model has no assessment history yet. Start with a diagnostic so the platform can identify which competencies deserve priority.</p>
             <Link href="/practice?mode=diagnostic" className="mt-5 inline-flex items-center gap-2 rounded-xl bg-indigo-700 px-4 py-2.5 text-sm font-semibold text-white">Start Diagnostic <ArrowRight size={16}/></Link>
@@ -89,14 +92,17 @@ export default async function Dashboard() {
             <h2 className="mt-2 text-2xl font-bold">{weakAreas[0]?.name || next.title}</h2>
             <p className="mt-2 text-slate-600">{signedIn ? "This is currently among your lowest-scoring tracked competencies." : next.competency}</p>
             <div className="mt-4 text-sm text-slate-500">15 min review • 10 practice questions • 8 flashcards</div>
-            <Link href="/study" className="mt-5 inline-flex items-center gap-2 rounded-xl bg-indigo-700 px-4 py-2.5 text-sm font-semibold text-white">Start Review <ArrowRight size={16}/></Link>
+            <div className="mt-5 flex flex-wrap gap-3">
+              <Link href="/study" className="inline-flex items-center gap-2 rounded-xl bg-indigo-700 px-4 py-2.5 text-sm font-semibold text-white">Start Review <ArrowRight size={16}/></Link>
+              {latestDiagnostic?.id && <Link href={"/diagnostic/results?session=" + latestDiagnostic.id} className="inline-flex items-center gap-2 rounded-xl border bg-white px-4 py-2.5 text-sm font-semibold text-slate-700">View Diagnostic Results</Link>}
+            </div>
           </>}
         </Card>
 
         <Card>
           <div className="text-sm text-slate-500">Review Readiness</div>
           <div className="mt-1 text-4xl font-bold">{readiness}%</div>
-          <p className="mt-3 text-sm leading-6 text-slate-500">{signedIn && readiness === 0 ? "Complete assessments to begin calculating platform mastery." : "Based on your tracked platform mastery. This is not a pass prediction."}</p>
+          <p className="mt-3 text-sm leading-6 text-slate-500">{signedIn && !profile?.diagnostic_completed ? "Complete your diagnostic to begin calculating a personalized mastery profile." : "Based on your tracked platform mastery. This is not a pass prediction."}</p>
         </Card>
       </div>
 
