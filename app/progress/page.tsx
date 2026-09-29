@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { BarChart3, Clock3, Target, Trophy } from "lucide-react";
 
 export default async function Progress() {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) return <AppShell>
