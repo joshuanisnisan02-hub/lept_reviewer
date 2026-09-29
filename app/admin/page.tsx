@@ -32,11 +32,11 @@ export default async function AdminPage() {
 
   const [sourceRes, competencyRes, moduleRes, lessonRes, questionRes, coverageRes] = await Promise.all([
     supabase.from("sources").select("id,organization,document_title,status,last_checked_at,is_active").order("authority_level"),
-    supabase.from("competencies").select("id,status"),
-    supabase.from("modules").select("id,status"),
-    supabase.from("lessons").select("id,status"),
-    supabase.from("questions").select("id,verified,review_status"),
-    supabase.from("competencies").select("id,code,title,exam_level,exam_area,tos_weight,status,modules:module_competencies(modules(id,title,status)),questions(id,verified,review_status)").order("exam_area").order("title")
+    supabase.from("competencies").select("id,status").eq("exam_level","Secondary"),
+    supabase.from("modules").select("id,status").eq("exam_level","Secondary"),
+    supabase.from("lessons").select("id,status").eq("exam_level","Secondary"),
+    supabase.from("questions").select("id,verified,review_status").eq("exam_level","Secondary"),
+    supabase.from("competencies").select("id,code,title,exam_level,exam_area,tos_weight,status,modules:module_competencies(modules(id,title,status)),questions(id,verified,review_status)").eq("exam_level","Secondary").order("exam_area").order("title")
   ]);
 
   const competencies = competencyRes.data ?? [];
@@ -57,7 +57,7 @@ export default async function AdminPage() {
     <div className="mx-auto max-w-7xl p-5 sm:p-8">
       <p className="text-sm font-semibold text-indigo-700">Content Administration</p>
       <h1 className="mt-1 text-3xl font-bold">TOS Coverage & Verification</h1>
-      <p className="mt-2 max-w-3xl text-slate-500">Use this area to confirm that current PRC competencies are covered before learner-facing content is published. Draft or unverified authored content remains outside normal learner mode until approved.</p>
+      <p className="mt-2 max-w-3xl text-slate-500">Secondary-only build: use this area to confirm current PRC competencies are covered before learner-facing content is published. Draft or unverified authored content remains outside normal learner mode until approved.</p>
       <div className="mt-5 flex flex-wrap gap-3">
         <Link href="/admin/content" className="inline-flex rounded-xl bg-indigo-700 px-4 py-2.5 text-sm font-semibold text-white">Open Content Review Workspace</Link>
         <Link href="/admin/questions" className="inline-flex rounded-xl border bg-white px-4 py-2.5 text-sm font-semibold text-slate-700">Open Question Bank</Link>
