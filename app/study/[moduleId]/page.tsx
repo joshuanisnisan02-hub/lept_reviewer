@@ -36,62 +36,90 @@ function normalizeList(v:any):string[]{return Array.isArray(v)?v.map(x=>typeof x
 const LESSON_ORDER=[
  "exam_coverage","overview","must_know","core_discussion","principles","reading_skills","source_use","argumentation",
  "purpose_audience_context","tone_and_register","formats","email_structure","special_purpose_principles","audience_adaptation",
- "evaluation_questions","fact_opinion_inference","digital_communication","worked_examples","worked_example","examples","example",
- "compare_and_distinguish","common_exam_trap","common_mistakes","lept_focus","exam_strategy"
+ "evaluation_questions","fact_opinion_inference","digital_communication","timeline","chronology","key_dates","worked_examples",
+ "worked_example","examples","example","compare_and_distinguish","common_exam_trap","common_mistakes","lept_focus","exam_strategy"
 ];
 
-const SECTION_META:Record<string,{title:string;kind:"intro"|"study"|"compare"|"example"|"trap"|"focus"}>={
- exam_coverage:{title:"What You Need to Study for LEPT",kind:"intro"},
- overview:{title:"Start Here",kind:"intro"},
- must_know:{title:"Must Know",kind:"study"},
- core_discussion:{title:"Core Lesson",kind:"study"},
- principles:{title:"Core Principles",kind:"study"},
- reading_skills:{title:"Reading Skills to Master",kind:"study"},
- source_use:{title:"Using Sources Correctly",kind:"study"},
- argumentation:{title:"Argument and Evidence",kind:"study"},
- purpose_audience_context:{title:"Purpose, Audience, and Context",kind:"study"},
- tone_and_register:{title:"Tone and Register",kind:"compare"},
- formats:{title:"Professional Formats to Recognize",kind:"study"},
- email_structure:{title:"Effective Email Structure",kind:"study"},
- special_purpose_principles:{title:"Technical Communication Principles",kind:"study"},
- audience_adaptation:{title:"Adapting to the Audience",kind:"study"},
- evaluation_questions:{title:"Questions to Ask When Evaluating a Message",kind:"study"},
- fact_opinion_inference:{title:"Compare: Fact, Opinion, and Inference",kind:"compare"},
- digital_communication:{title:"Digital Communication",kind:"study"},
- worked_examples:{title:"LEPT Application Examples",kind:"example"},
- worked_example:{title:"LEPT Application Example",kind:"example"},
- examples:{title:"LEPT Application Examples",kind:"example"},
- example:{title:"LEPT Application Example",kind:"example"},
- compare_and_distinguish:{title:"Do Not Confuse These",kind:"compare"},
- common_exam_trap:{title:"Common Exam Traps",kind:"trap"},
- common_mistakes:{title:"Common Exam Traps",kind:"trap"},
- lept_focus:{title:"How This Appears in LEPT",kind:"focus"},
- exam_strategy:{title:"How to Answer It in the Exam",kind:"focus"}
+const SECTION_TITLES:Record<string,string>={
+ exam_coverage:"EXAM COVERAGE",
+ overview:"OVERVIEW",
+ must_know:"MUST KNOW",
+ core_discussion:"CORE REVIEW",
+ principles:"CORE PRINCIPLES",
+ reading_skills:"READING SKILLS TO MASTER",
+ source_use:"USING SOURCES",
+ argumentation:"ARGUMENT AND EVIDENCE",
+ purpose_audience_context:"PURPOSE, AUDIENCE, AND CONTEXT",
+ tone_and_register:"TONE AND REGISTER",
+ formats:"PROFESSIONAL FORMATS",
+ email_structure:"EFFECTIVE EMAIL STRUCTURE",
+ special_purpose_principles:"TECHNICAL COMMUNICATION",
+ audience_adaptation:"ADAPTING TO THE AUDIENCE",
+ evaluation_questions:"QUESTIONS TO ASK",
+ fact_opinion_inference:"FACT vs OPINION vs INFERENCE",
+ digital_communication:"DIGITAL COMMUNICATION",
+ timeline:"TIMELINE",
+ chronology:"CHRONOLOGY",
+ key_dates:"KEY DATES",
+ worked_examples:"EXAMPLES / APPLICATION",
+ worked_example:"EXAMPLE / APPLICATION",
+ examples:"EXAMPLES / APPLICATION",
+ example:"EXAMPLE / APPLICATION",
+ compare_and_distinguish:"DO NOT CONFUSE",
+ common_exam_trap:"COMMON EXAM TRAPS",
+ common_mistakes:"COMMON EXAM TRAPS",
+ lept_focus:"LEPT FOCUS",
+ exam_strategy:"HOW TO ANSWER"
 };
 
-function HumanText({value}:{value:any}){
+function BoldLead({text}:{text:string}){
+ const idx=text.indexOf(":");
+ if(idx>0&&idx<48){
+  return <><strong className="font-bold text-slate-950">{text.slice(0,idx+1)}</strong>{" "+text.slice(idx+1).trim()}</>;
+ }
+ return <>{text}</>;
+}
+
+function CompactTable({rows}:{rows:any[]}){
+ if(!rows.length)return null;
+ const first=rows[0];
+ if(!first||typeof first!=="object"||Array.isArray(first))return null;
+ const keys=Object.keys(first);
+ return <div className="overflow-x-auto">
+  <table className="w-full border-collapse text-[13px] leading-5">
+   <thead><tr>{keys.map(k=><th key={k} className="border border-slate-400 bg-slate-100 px-2 py-1.5 text-left font-bold capitalize">{k.replaceAll("_"," ")}</th>)}</tr></thead>
+   <tbody>{rows.map((row,i)=><tr key={i}>{keys.map(k=><td key={k} className="border border-slate-400 px-2 py-1.5 align-top">{String(row[k]??"")}</td>)}</tr>)}</tbody>
+  </table>
+ </div>;
+}
+
+function ReviewerValue({value}:{value:any}){
  if(value==null)return null;
- if(typeof value==="string")return <p className="text-[15px] leading-7 text-slate-700">{value}</p>;
- if(Array.isArray(value))return <ul className="space-y-3">{value.map((x,i)=><li key={i} className="flex gap-3 text-[15px] leading-7 text-slate-700"><span className="mt-[11px] size-1.5 shrink-0 rounded-full bg-indigo-400"/><span>{typeof x==="string"?x:JSON.stringify(x)}</span></li>)}</ul>;
- if(typeof value==="object")return <div className="space-y-3">{Object.entries(value).map(([k,v])=><div key={k}><div className="text-sm font-semibold capitalize text-slate-800">{k.replaceAll("_"," ")}</div><HumanText value={v}/></div>)}</div>;
+ if(typeof value==="string")return <p className="text-[14px] leading-6 text-slate-900"><BoldLead text={value}/></p>;
+ if(Array.isArray(value)){
+  if(value.length&&typeof value[0]==="object"&&!Array.isArray(value[0]))return <CompactTable rows={value}/>;
+  return <ul className="space-y-1.5 pl-5 text-[14px] leading-6 text-slate-900">{value.map((x,i)=><li key={i} className="list-disc"><BoldLead text={typeof x==="string"?x:JSON.stringify(x)}/></li>)}</ul>;
+ }
+ if(typeof value==="object")return <div className="space-y-2">{Object.entries(value).map(([k,v])=><div key={k}><div className="mb-1 text-[13px] font-bold uppercase tracking-wide text-slate-800">{k.replaceAll("_"," ")}</div><ReviewerValue value={v}/></div>)}</div>;
  return null;
 }
 
-function LessonSection({name,value}:{name:string;value:any}){
- const meta=SECTION_META[name]??{title:name.replaceAll("_"," ").replace(/\b\w/g,x=>x.toUpperCase()),kind:"study" as const};
- const shell=meta.kind==="trap"?"border-amber-200 bg-amber-50/70":meta.kind==="focus"?"border-indigo-200 bg-indigo-50/70":meta.kind==="compare"?"border-sky-200 bg-sky-50/60":meta.kind==="example"?"border-emerald-200 bg-emerald-50/50":"border-slate-200 bg-white";
- return <section className={"rounded-2xl border p-5 sm:p-6 "+shell}>
-  <h3 className="text-lg font-bold text-slate-950">{meta.title}</h3>
-  <div className="mt-3"><HumanText value={value}/></div>
+function ReviewerSection({name,value}:{name:string;value:any}){
+ const title=SECTION_TITLES[name]??name.replaceAll("_"," ").toUpperCase();
+ const isTrap=name==="common_exam_trap"||name==="common_mistakes";
+ const isFocus=name==="lept_focus"||name==="exam_strategy";
+ return <section className={"mb-5 break-inside-avoid "+(isTrap||isFocus?"border-l-4 pl-3 ":"")+(isTrap?"border-amber-500":isFocus?"border-indigo-600":"")}>
+  <h3 className="mb-2 border-b border-slate-300 pb-1 text-[15px] font-extrabold tracking-tight text-slate-950">{title}</h3>
+  <ReviewerValue value={value}/>
  </section>;
 }
 
 function ExamLesson({content}:{content:any}){
  if(!content)return null;
- if(typeof content!=="object"||Array.isArray(content))return <HumanText value={content}/>;
+ if(typeof content!=="object"||Array.isArray(content))return <ReviewerValue value={content}/>;
  const keys=Object.keys(content);
  const ordered=[...LESSON_ORDER.filter(k=>keys.includes(k)),...keys.filter(k=>!LESSON_ORDER.includes(k))];
- return <div className="space-y-4">{ordered.map(k=><LessonSection key={k} name={k} value={content[k]}/>)}</div>;
+ return <div className="columns-1 gap-8 xl:columns-2">{ordered.map(k=><ReviewerSection key={k} name={k} value={content[k]}/>)}</div>;
 }
 
 export default function ModuleReader(){
@@ -133,19 +161,18 @@ export default function ModuleReader(){
   {!signedIn&&<div className="mt-5 rounded-xl bg-amber-50 p-3 text-sm text-amber-800">Sign in to save lesson completion and unlock assessments.</div>}
 
   <div className="mt-7 grid gap-6 lg:grid-cols-[300px_1fr]">
-   <Card className="h-fit p-3"><div className="px-2 pb-3 pt-1 text-sm font-bold">Module Journey</div><div className="space-y-1">{lessons.map(l=>{const done=!!progressMap.get(l.id)?.completed_at;return <button key={l.id} onClick={()=>{setQuizOpen(false);setActiveLesson(l.id)}} className={"flex w-full items-start gap-3 rounded-xl px-3 py-3 text-left text-sm "+(activeLesson===l.id&&!quizOpen?"bg-indigo-50 text-indigo-800":"hover:bg-slate-50")}>{done?<CheckCircle2 size={17} className="mt-0.5 shrink-0 text-emerald-600"/>:<Circle size={17} className="mt-0.5 shrink-0 text-slate-300"/>}<span><span className="block text-xs text-slate-400">Lesson {l.sequence}</span><span className="font-medium">{l.title}</span></span></button>})}</div>
+   <Card className="sticky top-5 h-fit p-3"><div className="px-2 pb-3 pt-1 text-sm font-bold">Module Journey</div><div className="space-y-1">{lessons.map(l=>{const done=!!progressMap.get(l.id)?.completed_at;return <button key={l.id} onClick={()=>{setQuizOpen(false);setActiveLesson(l.id)}} className={"flex w-full items-start gap-3 rounded-xl px-3 py-3 text-left text-sm "+(activeLesson===l.id&&!quizOpen?"bg-indigo-50 text-indigo-800":"hover:bg-slate-50")}>{done?<CheckCircle2 size={17} className="mt-0.5 shrink-0 text-emerald-600"/>:<Circle size={17} className="mt-0.5 shrink-0 text-slate-300"/>}<span><span className="block text-xs text-slate-400">Lesson {l.sequence}</span><span className="font-medium">{l.title}</span></span></button>})}</div>
     {isRizal&&<button disabled={!allDone} onClick={()=>setQuizOpen(true)} className={"mt-3 flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-left text-sm font-semibold "+(allDone?"border-indigo-200 bg-indigo-50 text-indigo-800":"bg-slate-50 text-slate-400")} >{allDone?<Trophy size={18}/>:<LockKeyhole size={18}/>}<span>Module Assessment<span className="block text-xs font-normal">15 LEPT-style items</span></span></button>}
    </Card>
 
-   {!quizOpen&&current?<Card className="p-6 sm:p-8"><div className="flex justify-between gap-4"><div><div className="text-xs font-semibold uppercase tracking-wide text-indigo-600">Lesson {current.sequence}</div><h2 className="mt-2 text-2xl font-bold">{current.title}</h2></div>{current.estimated_minutes&&<div className="inline-flex items-center gap-2 text-sm text-slate-500"><Clock3 size={16}/>{current.estimated_minutes} min</div>}</div>
-    {normalizeList(current.learning_objectives).length>0&&<section className="mt-7"><h3 className="text-lg font-bold">Learning Objectives</h3><ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-6 text-slate-700">{normalizeList(current.learning_objectives).map((x,i)=><li key={i}>{x}</li>)}</ul></section>}
-    <section className="mt-7">
-      <div className="mb-4 flex items-center gap-3"><div className="h-px flex-1 bg-slate-200"/><span className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">Board Exam Review Lesson</span><div className="h-px flex-1 bg-slate-200"/></div>
+   {!quizOpen&&current?<Card className="overflow-hidden border-slate-300 bg-white p-0 shadow-sm"><div className="border-b border-slate-300 px-6 py-5 sm:px-8"><div className="flex justify-between gap-4"><div><div className="text-xs font-bold uppercase tracking-[0.15em] text-slate-500">Reviewer Sheet • Lesson {current.sequence}</div><h2 className="mt-1 text-2xl font-extrabold tracking-tight text-slate-950">{current.title}</h2></div>{current.estimated_minutes&&<div className="inline-flex items-center gap-2 text-sm text-slate-500"><Clock3 size={16}/>{current.estimated_minutes} min</div>}</div></div><div className="px-6 py-5 sm:px-8">
+    {normalizeList(current.learning_objectives).length>0&&<section className="mb-6 break-inside-avoid"><h3 className="mb-2 border-b border-slate-300 pb-1 text-[15px] font-extrabold text-slate-950">WHAT THIS LESSON PREPARES YOU TO ANSWER</h3><ul className="space-y-1.5 pl-5 text-[14px] leading-6 text-slate-900">{normalizeList(current.learning_objectives).map((x,i)=><li key={i} className="list-disc">{x}</li>)}</ul></section>}
+    <section>
       <ExamLesson content={current.content}/>
     </section>
-    {normalizeList(current.key_takeaways).length>0&&<section className="mt-7 rounded-2xl border border-violet-200 bg-violet-50/70 p-5"><h3 className="font-bold">Exam Takeaways — Remember These</h3><ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-6 text-slate-700">{normalizeList(current.key_takeaways).map((x,i)=><li key={i}>{x}</li>)}</ul></section>}
-    <div className="mt-8 flex justify-end"><button disabled={!!progressMap.get(current.id)?.completed_at} onClick={()=>markComplete(current.id)} className="rounded-xl bg-indigo-700 px-4 py-2.5 text-sm font-semibold text-white disabled:bg-emerald-600">{progressMap.get(current.id)?.completed_at?"Completed":"Mark Lesson Complete"}</button></div>
-   </Card>:quizOpen&&isRizal?<Card className="p-6 sm:p-8"><div className="flex items-start justify-between gap-4"><div><div className="text-xs font-semibold uppercase tracking-wide text-indigo-600">Module Assessment</div><h2 className="mt-2 text-2xl font-bold">Life and Works of Rizal</h2><p className="mt-2 text-sm text-slate-500">Choose the best answer. Questions emphasize interpretation, application, and analysis rather than isolated recall.</p></div>{submitted&&<div className="rounded-2xl bg-indigo-50 px-5 py-3 text-center"><div className="text-2xl font-bold text-indigo-700">{score}/15</div><div className="text-xs text-slate-500">{Math.round(score/15*100)}%</div></div>}</div>
+    {normalizeList(current.key_takeaways).length>0&&<section className="mt-6 border-2 border-slate-700 p-4"><h3 className="mb-2 text-[15px] font-extrabold text-slate-950">QUICK RECALL — REMEMBER THESE</h3><ul className="space-y-1.5 pl-5 text-[14px] leading-6 text-slate-900">{normalizeList(current.key_takeaways).map((x,i)=><li key={i} className="list-disc">{x}</li>)}</ul></section>}
+    <div className="mt-7 flex justify-end border-t border-slate-300 pt-5"><button disabled={!!progressMap.get(current.id)?.completed_at} onClick={()=>markComplete(current.id)} className="rounded-lg bg-indigo-700 px-4 py-2.5 text-sm font-semibold text-white disabled:bg-emerald-600">{progressMap.get(current.id)?.completed_at?"Completed":"Mark Lesson Complete"}</button></div>
+   </div></Card>:quizOpen&&isRizal?<Card className="p-6 sm:p-8"><div className="flex items-start justify-between gap-4"><div><div className="text-xs font-semibold uppercase tracking-wide text-indigo-600">Module Assessment</div><h2 className="mt-2 text-2xl font-bold">Life and Works of Rizal</h2><p className="mt-2 text-sm text-slate-500">Choose the best answer. Questions emphasize interpretation, application, and analysis rather than isolated recall.</p></div>{submitted&&<div className="rounded-2xl bg-indigo-50 px-5 py-3 text-center"><div className="text-2xl font-bold text-indigo-700">{score}/15</div><div className="text-xs text-slate-500">{Math.round(score/15*100)}%</div></div>}</div>
     <div className="mt-7 space-y-7">{RIZAL_QUIZ.map((q,i)=><div key={i} className="border-b pb-7 last:border-0"><p className="font-semibold leading-6">{i+1}. {q.q}</p><div className="mt-3 grid gap-2">{q.choices.map((ch,j)=>{const chosen=answers[i]===j,correct=q.answer===j;return <button disabled={submitted} key={j} onClick={()=>setAnswers(a=>({...a,[i]:j}))} className={"rounded-xl border px-4 py-3 text-left text-sm "+(submitted&&correct?"border-emerald-400 bg-emerald-50":submitted&&chosen&&!correct?"border-rose-300 bg-rose-50":chosen?"border-indigo-500 bg-indigo-50":"hover:bg-slate-50")}><b className="mr-2">{String.fromCharCode(65+j)}.</b>{ch}</button>})}</div>{submitted&&<div className="mt-3 rounded-xl bg-slate-50 p-3 text-sm leading-6 text-slate-700"><b>Why:</b> {q.why}{answers[i]!==q.answer&&<button onClick={()=>{setQuizOpen(false);setActiveLesson(lessons.find(l=>l.sequence===q.lesson)?.id??null)}} className="ml-2 font-semibold text-indigo-700 underline">Review Lesson {q.lesson}</button>}</div>}</div>)}</div>
     {!submitted?<button disabled={Object.keys(answers).length!==15} onClick={()=>setSubmitted(true)} className="mt-4 rounded-xl bg-indigo-700 px-5 py-3 text-sm font-semibold text-white disabled:bg-slate-300">Submit Assessment</button>:<div className="mt-5 flex flex-wrap gap-3"><button onClick={()=>{setAnswers({});setSubmitted(false);window.scrollTo({top:0,behavior:"smooth"})}} className="inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold"><RotateCcw size={16}/> Retake</button><Link href="/study" className="rounded-xl bg-indigo-700 px-4 py-2.5 text-sm font-semibold text-white">Continue Learning Path</Link></div>}
    </Card>:<Card>No published lessons are available.</Card>}
