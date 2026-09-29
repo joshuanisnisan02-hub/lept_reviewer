@@ -57,7 +57,11 @@ export default async function AdminPage() {
     <div className="mx-auto max-w-7xl p-5 sm:p-8">
       <p className="text-sm font-semibold text-indigo-700">Content Administration</p>
       <h1 className="mt-1 text-3xl font-bold">TOS Coverage & Verification</h1>
-      <p className="mt-2 max-w-3xl text-slate-500">Use this area to confirm that current PRC competencies are covered before learner-facing content is published. Draft or unverified authored content remains outside normal learner mode until approved.</p>\n      <Link href="/admin/content" className="mt-5 inline-flex rounded-xl bg-indigo-700 px-4 py-2.5 text-sm font-semibold text-white">Open Content Review Workspace</Link>
+      <p className="mt-2 max-w-3xl text-slate-500">Use this area to confirm that current PRC competencies are covered before learner-facing content is published. Draft or unverified authored content remains outside normal learner mode until approved.</p>
+      <div className="mt-5 flex flex-wrap gap-3">
+        <Link href="/admin/content" className="inline-flex rounded-xl bg-indigo-700 px-4 py-2.5 text-sm font-semibold text-white">Open Content Review Workspace</Link>
+        <Link href="/admin/questions" className="inline-flex rounded-xl border bg-white px-4 py-2.5 text-sm font-semibold text-slate-700">Open Question Bank</Link>
+      </div>
 
       <div className="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map(([label,value,Icon]) => <Card key={label}><Icon className="text-indigo-600"/><div className="mt-4 text-sm text-slate-500">{label}</div><div className="mt-1 text-3xl font-bold">{value}</div></Card>)}
