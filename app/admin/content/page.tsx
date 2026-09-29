@@ -59,7 +59,7 @@ export default function AdminContentPage(){
     if(profile?.role==="admin"||profile?.role==="content_reviewer"){
       const [m,l,c,s,q,f]=await Promise.all([
         supabase.from("modules").select("id,exam_level,exam_area,title,status,tos_weight").eq("exam_level","Secondary").order("exam_area").order("sequence"),
-        supabase.from("lessons").select("id,module_id,title,sequence,status,learning_objectives,content,key_takeaways,modules(title,exam_level)").eq("exam_level","Secondary").order("sequence"),
+        supabase.from("lessons").select("id,module_id,title,sequence,status,learning_objectives,content,key_takeaways,modules!inner(title,exam_level)").eq("modules.exam_level","Secondary").order("sequence"),
         supabase.from("competencies").select("id,code,title,description,exam_level,exam_area,official_source_id").eq("exam_level","Secondary").order("exam_area").order("title"),
         supabase.from("sources").select("id,organization,document_title,status").in("status",["verified","published"]).order("organization"),
         supabase.from("questions").select("id,question,review_status,verified,exam_area,difficulty,modules(title)").eq("exam_level","Secondary").order("created_at",{ascending:false}).limit(100),
