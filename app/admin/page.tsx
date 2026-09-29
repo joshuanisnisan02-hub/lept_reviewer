@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { BookOpenCheck, Database, FileCheck2, Shield, TriangleAlert } from "lucide-react";
 
 export default async function AdminPage() {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/auth");
 
