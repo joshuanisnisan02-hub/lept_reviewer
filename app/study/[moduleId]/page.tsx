@@ -6,10 +6,11 @@ import { useParams } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 import { Card } from "@/components/ui";
 import { createClient } from "@/lib/supabase/client";
-import { ArrowLeft, CheckCircle2, Circle, Clock3, LockKeyhole, RotateCcw, Trophy } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Circle, Clock3, Highlighter, LockKeyhole, RotateCcw, Save, StickyNote, Trash2, Trophy } from "lucide-react";
 
 type ModuleRow={id:string;title:string;description:string|null;exam_area:string;estimated_minutes:number|null;tos_weight:number|null};
-type LessonRow={id:string;title:string;sequence:number;learning_objectives:any;content:any;key_takeaways:any;estimated_minutes:number|null};
+type LessonRow={id:string;title:string;sequence:number;learning_objectives:any;content:any;key_takeaways:any;key_terms:any;estimated_minutes:number|null};
+type HighlightRow={id:string;lesson_id:string;selected_text:string;color:"yellow"|"green"|"blue"|"pink";created_at:string};
 type ProgressRow={lesson_id:string;status:string;progress_percent:number;completed_at:string|null};
 type Question={q:string;choices:string[];answer:number;why:string;lesson:number};
 
@@ -72,15 +73,38 @@ const SECTION_TITLES:Record<string,string>={
  exam_strategy:"HOW TO ANSWER"
 };
 
-function BoldLead({text}:{text:string}){
- const idx=text.indexOf(":");
- if(idx>0&&idx<48){
-  return <><strong className="font-bold text-slate-950">{text.slice(0,idx+1)}</strong>{" "+text.slice(idx+1).trim()}</>;
+const HIGHLIGHT_CLASS:Record<string,string>={
+ yellow:"bg-yellow-200/80",
+ green:"bg-emerald-200/80",
+ blue:"bg-sky-200/80",
+ pink:"bg-pink-200/80"
+};
+
+function HighlightedText({text,highlights}:{text:string;highlights:HighlightRow[]}){
+ const hits=highlights.filter(h=>h.selected_text&&text.includes(h.selected_text)).sort((a,b)=>b.selected_text.length-a.selected_text.length);
+ if(!hits.length)return <>{text}</>;
+ let parts:{text:string;color?:string;id?:string}[]=[{text}];
+ for(const h of hits){
+  const next:{text:string;color?:string;id?:string}[]=[];
+  for(const p of parts){
+   if(p.color){next.push(p);continue}
+   const chunks=p.text.split(h.selected_text);
+   chunks.forEach((chunk,i)=>{if(chunk)next.push({text:chunk});if(i<chunks.length-1)next.push({text:h.selected_text,color:h.color,id:h.id})});
+  }
+  parts=next;
  }
- return <>{text}</>;
+ return <>{parts.map((p,i)=>p.color?<mark key={(p.id??"h")+i} className={"rounded-sm px-0.5 "+HIGHLIGHT_CLASS[p.color]}>{p.text}</mark>:<span key={"t"+i}>{p.text}</span>)}</>;
 }
 
-function CompactTable({rows}:{rows:any[]}){
+function BoldLead({text,highlights}:{text:string;highlights:HighlightRow[]}){
+ const idx=text.indexOf(":");
+ if(idx>0&&idx<48){
+  return <><strong className="font-bold text-slate-950"><HighlightedText text={text.slice(0,idx+1)} highlights={highlights}/></strong>{" "}<HighlightedText text={text.slice(idx+1).trim()} highlights={highlights}/></>;
+ }
+ return <HighlightedText text={text} highlights={highlights}/>;
+}
+
+function CompactTable({rows,highlights}:{rows:any[];highlights:HighlightRow[]}){
  if(!rows.length)return null;
  const first=rows[0];
  if(!first||typeof first!=="object"||Array.isArray(first))return null;
@@ -88,38 +112,38 @@ function CompactTable({rows}:{rows:any[]}){
  return <div className="overflow-x-auto">
   <table className="w-full border-collapse text-[13px] leading-5">
    <thead><tr>{keys.map(k=><th key={k} className="border border-slate-400 bg-slate-100 px-2 py-1.5 text-left font-bold capitalize">{k.replaceAll("_"," ")}</th>)}</tr></thead>
-   <tbody>{rows.map((row,i)=><tr key={i}>{keys.map(k=><td key={k} className="border border-slate-400 px-2 py-1.5 align-top">{String(row[k]??"")}</td>)}</tr>)}</tbody>
+   <tbody>{rows.map((row,i)=><tr key={i}>{keys.map(k=><td key={k} className="border border-slate-400 px-2 py-1.5 align-top"><HighlightedText text={String(row[k]??"")} highlights={highlights}/></td>)}</tr>)}</tbody>
   </table>
  </div>;
 }
 
-function ReviewerValue({value}:{value:any}){
+function ReviewerValue({value,highlights}:{value:any;highlights:HighlightRow[]}){
  if(value==null)return null;
- if(typeof value==="string")return <p className="text-[14px] leading-6 text-slate-900"><BoldLead text={value}/></p>;
+ if(typeof value==="string")return <p className="text-[14px] leading-6 text-slate-900"><BoldLead text={value} highlights={highlights}/></p>;
  if(Array.isArray(value)){
-  if(value.length&&typeof value[0]==="object"&&!Array.isArray(value[0]))return <CompactTable rows={value}/>;
-  return <ul className="space-y-1.5 pl-5 text-[14px] leading-6 text-slate-900">{value.map((x,i)=><li key={i} className="list-disc"><BoldLead text={typeof x==="string"?x:JSON.stringify(x)}/></li>)}</ul>;
+  if(value.length&&typeof value[0]==="object"&&!Array.isArray(value[0]))return <CompactTable rows={value} highlights={highlights}/>;
+  return <ul className="space-y-1.5 pl-5 text-[14px] leading-6 text-slate-900">{value.map((x,i)=><li key={i} className="list-disc"><BoldLead text={typeof x==="string"?x:JSON.stringify(x)} highlights={highlights}/></li>)}</ul>;
  }
- if(typeof value==="object")return <div className="space-y-2">{Object.entries(value).map(([k,v])=><div key={k}><div className="mb-1 text-[13px] font-bold uppercase tracking-wide text-slate-800">{k.replaceAll("_"," ")}</div><ReviewerValue value={v}/></div>)}</div>;
+ if(typeof value==="object")return <div className="space-y-2">{Object.entries(value).map(([k,v])=><div key={k}><div className="mb-1 text-[13px] font-bold uppercase tracking-wide text-slate-800">{k.replaceAll("_"," ")}</div><ReviewerValue value={v} highlights={highlights}/></div>)}</div>;
  return null;
 }
 
-function ReviewerSection({name,value}:{name:string;value:any}){
+function ReviewerSection({name,value,highlights}:{name:string;value:any;highlights:HighlightRow[]}){
  const title=SECTION_TITLES[name]??name.replaceAll("_"," ").toUpperCase();
  const isTrap=name==="common_exam_trap"||name==="common_mistakes";
  const isFocus=name==="lept_focus"||name==="exam_strategy";
  return <section className={"mb-5 break-inside-avoid "+(isTrap||isFocus?"border-l-4 pl-3 ":"")+(isTrap?"border-amber-500":isFocus?"border-indigo-600":"")}>
   <h3 className="mb-2 border-b border-slate-300 pb-1 text-[15px] font-extrabold tracking-tight text-slate-950">{title}</h3>
-  <ReviewerValue value={value}/>
+  <ReviewerValue value={value} highlights={highlights}/>
  </section>;
 }
 
-function ExamLesson({content}:{content:any}){
+function ExamLesson({content,highlights}:{content:any;highlights:HighlightRow[]}){
  if(!content)return null;
- if(typeof content!=="object"||Array.isArray(content))return <ReviewerValue value={content}/>;
+ if(typeof content!=="object"||Array.isArray(content))return <ReviewerValue value={content} highlights={highlights}/>;
  const keys=Object.keys(content);
  const ordered=[...LESSON_ORDER.filter(k=>keys.includes(k)),...keys.filter(k=>!LESSON_ORDER.includes(k))];
- return <div className="columns-1 gap-8 xl:columns-2">{ordered.map(k=><ReviewerSection key={k} name={k} value={content[k]}/>)}</div>;
+ return <div className="columns-1 gap-8 xl:columns-2">{ordered.map(k=><ReviewerSection key={k} name={k} value={content[k]} highlights={highlights}/>)}</div>;
 }
 
 export default function ModuleReader(){
@@ -127,18 +151,66 @@ export default function ModuleReader(){
  const [module,setModule]=useState<ModuleRow|null>(null),[lessons,setLessons]=useState<LessonRow[]>([]),[progress,setProgress]=useState<ProgressRow[]>([]);
  const [activeLesson,setActiveLesson]=useState<string|null>(null),[signedIn,setSignedIn]=useState(false),[loading,setLoading]=useState(true),[message,setMessage]=useState("");
  const [quizOpen,setQuizOpen]=useState(false),[answers,setAnswers]=useState<Record<number,number>>({}),[submitted,setSubmitted]=useState(false);
+ const [noteId,setNoteId]=useState<string|null>(null),[noteText,setNoteText]=useState(""),[noteSaving,setNoteSaving]=useState(false);
+ const [highlights,setHighlights]=useState<HighlightRow[]>([]),[selectedText,setSelectedText]=useState(""),[highlightColor,setHighlightColor]=useState<HighlightRow["color"]>("yellow");
 
  useEffect(()=>{load()},[moduleId]);
  async function load(){
   setLoading(true);const {data:{user}}=await supabase.auth.getUser();setSignedIn(!!user);
   const [mr,lr]=await Promise.all([
    supabase.from("modules").select("id,title,description,exam_area,estimated_minutes,tos_weight").eq("id",moduleId).eq("status","published").maybeSingle(),
-   supabase.from("lessons").select("id,title,sequence,learning_objectives,content,key_takeaways,estimated_minutes").eq("module_id",moduleId).eq("status","published").order("sequence")
+   supabase.from("lessons").select("id,title,sequence,learning_objectives,content,key_takeaways,key_terms,estimated_minutes").eq("module_id",moduleId).eq("status","published").order("sequence")
   ]);
   setModule(mr.data as ModuleRow|null);const rows=(lr.data??[]) as LessonRow[];setLessons(rows);setActiveLesson(rows[0]?.id??null);
   if(user&&rows.length){const {data}=await supabase.from("lesson_progress").select("lesson_id,status,progress_percent,completed_at").eq("user_id",user.id).in("lesson_id",rows.map(x=>x.id));setProgress((data??[]) as ProgressRow[])}
   setLoading(false);
  }
+ useEffect(()=>{if(activeLesson&&signedIn)loadStudyTools(activeLesson);else{setNoteId(null);setNoteText("");setHighlights([])}},[activeLesson,signedIn]);
+
+ async function loadStudyTools(lessonId:string){
+  const {data:{user}}=await supabase.auth.getUser();if(!user)return;
+  const [nr,hr]=await Promise.all([
+   supabase.from("user_notes").select("id,content").eq("user_id",user.id).eq("entity_type","lesson").eq("entity_id",lessonId).order("updated_at",{ascending:false}).limit(1).maybeSingle(),
+   supabase.from("user_highlights").select("id,lesson_id,selected_text,color,created_at").eq("user_id",user.id).eq("lesson_id",lessonId).order("created_at")
+  ]);
+  setNoteId(nr.data?.id??null);setNoteText(nr.data?.content??"");setHighlights((hr.data??[]) as HighlightRow[]);
+ }
+
+ async function saveNote(){
+  if(!current)return;const {data:{user}}=await supabase.auth.getUser();if(!user){setMessage("Sign in to save personal notes.");return}
+  setNoteSaving(true);
+  if(!noteText.trim()&&noteId){await supabase.from("user_notes").delete().eq("id",noteId).eq("user_id",user.id);setNoteId(null);setMessage("Note removed.");setNoteSaving(false);return}
+  if(!noteText.trim()){setNoteSaving(false);return}
+  if(noteId){
+   const {error}=await supabase.from("user_notes").update({content:noteText.trim(),updated_at:new Date().toISOString()}).eq("id",noteId).eq("user_id",user.id);
+   if(error)setMessage(error.message);else setMessage("Personal note saved.");
+  }else{
+   const {data,error}=await supabase.from("user_notes").insert({user_id:user.id,entity_type:"lesson",entity_id:current.id,content:noteText.trim()}).select("id").single();
+   if(error)setMessage(error.message);else{setNoteId(data.id);setMessage("Personal note saved.")}
+  }
+  setNoteSaving(false);
+ }
+
+ function captureSelection(){
+  const sel=window.getSelection();const text=sel?.toString().trim()??"";
+  if(!text||text.length>2000){setSelectedText("");return}
+  const root=document.getElementById("reviewer-content");const node=sel?.anchorNode;
+  if(root&&node&&root.contains(node))setSelectedText(text);
+ }
+
+ async function saveHighlight(){
+  if(!current||!selectedText)return;const {data:{user}}=await supabase.auth.getUser();if(!user){setMessage("Sign in to save highlights.");return}
+  const {data,error}=await supabase.from("user_highlights").insert({user_id:user.id,lesson_id:current.id,selected_text:selectedText,color:highlightColor}).select("id,lesson_id,selected_text,color,created_at").single();
+  if(error){setMessage(error.message);return}
+  setHighlights(h=>[...h,data as HighlightRow]);setSelectedText("");window.getSelection()?.removeAllRanges();setMessage("Highlight saved.");
+ }
+
+ async function removeHighlight(id:string){
+  const {data:{user}}=await supabase.auth.getUser();if(!user)return;
+  const {error}=await supabase.from("user_highlights").delete().eq("id",id).eq("user_id",user.id);
+  if(error)setMessage(error.message);else setHighlights(h=>h.filter(x=>x.id!==id));
+ }
+
  const progressMap=useMemo(()=>new Map(progress.map(x=>[x.lesson_id,x])),[progress]);
  const current=lessons.find(x=>x.id===activeLesson)??lessons[0];
  const allDone=lessons.length>0&&lessons.every(x=>!!progressMap.get(x.id)?.completed_at);
@@ -167,9 +239,35 @@ export default function ModuleReader(){
 
    {!quizOpen&&current?<Card className="overflow-hidden border-slate-300 bg-white p-0 shadow-sm"><div className="border-b border-slate-300 px-6 py-5 sm:px-8"><div className="flex justify-between gap-4"><div><div className="text-xs font-bold uppercase tracking-[0.15em] text-slate-500">Reviewer Sheet • Lesson {current.sequence}</div><h2 className="mt-1 text-2xl font-extrabold tracking-tight text-slate-950">{current.title}</h2></div>{current.estimated_minutes&&<div className="inline-flex items-center gap-2 text-sm text-slate-500"><Clock3 size={16}/>{current.estimated_minutes} min</div>}</div></div><div className="px-6 py-5 sm:px-8">
     {normalizeList(current.learning_objectives).length>0&&<section className="mb-6 break-inside-avoid"><h3 className="mb-2 border-b border-slate-300 pb-1 text-[15px] font-extrabold text-slate-950">WHAT THIS LESSON PREPARES YOU TO ANSWER</h3><ul className="space-y-1.5 pl-5 text-[14px] leading-6 text-slate-900">{normalizeList(current.learning_objectives).map((x,i)=><li key={i} className="list-disc">{x}</li>)}</ul></section>}
-    <section>
-      <ExamLesson content={current.content}/>
+        {Array.isArray(current.key_terms)&&current.key_terms.length>0&&<section className="mb-6 break-inside-avoid border-2 border-slate-700">
+      <div className="border-b border-slate-700 bg-slate-100 px-3 py-2 text-[15px] font-extrabold text-slate-950">KEY TERMINOLOGIES</div>
+      <div className="grid sm:grid-cols-2">{current.key_terms.map((item:any,i:number)=><div key={i} className="border-b border-slate-300 px-3 py-2 sm:[&:nth-child(odd)]:border-r"><div className="text-[14px] font-bold text-slate-950">{item.term}</div><div className="mt-0.5 text-[13px] leading-5 text-slate-700">{item.definition}</div></div>)}</div>
+    </section>}
+
+    <section className="mb-6 border border-slate-300 bg-slate-50 p-4">
+      <div className="flex items-center gap-2 text-[15px] font-extrabold text-slate-950"><Highlighter size={17}/> HIGHLIGHT TOOL</div>
+      <p className="mt-1 text-xs text-slate-500">Select any text in the reviewer below. Your saved highlights are private to your account.</p>
+      {selectedText&&<div className="mt-3 rounded-lg border bg-white p-3">
+        <div className="line-clamp-2 text-sm text-slate-700">“{selectedText}”</div>
+        <div className="mt-3 flex flex-wrap items-center gap-2">{(["yellow","green","blue","pink"] as const).map(color=><button key={color} onClick={()=>setHighlightColor(color)} className={"h-7 w-7 rounded border "+HIGHLIGHT_CLASS[color]+(highlightColor===color?" ring-2 ring-indigo-500":"")} aria-label={color+" highlight"}/>)}
+        <button onClick={saveHighlight} className="ml-1 rounded-lg bg-indigo-700 px-3 py-1.5 text-xs font-semibold text-white">Save highlight</button></div>
+      </div>}
+      {highlights.length>0&&<div className="mt-3 space-y-2">{highlights.map(h=><div key={h.id} className="flex items-start gap-2 rounded border bg-white p-2 text-xs"><span className={"mt-0.5 h-4 w-1.5 shrink-0 rounded "+HIGHLIGHT_CLASS[h.color]}/><span className="line-clamp-2 flex-1 text-slate-700">{h.selected_text}</span><button onClick={()=>removeHighlight(h.id)} className="text-slate-400 hover:text-rose-600" aria-label="Remove highlight"><Trash2 size={14}/></button></div>)}</div>}
     </section>
+
+    <section className="mb-6 border border-slate-300 p-4">
+      <div className="flex items-center gap-2 text-[15px] font-extrabold text-slate-950"><StickyNote size={17}/> MY NOTES</div>
+      <p className="mt-1 text-xs text-slate-500">Your note is saved only to this lesson and only visible to your account.</p>
+      <textarea value={noteText} onChange={e=>setNoteText(e.target.value)} disabled={!signedIn} placeholder={signedIn?"Write your own reviewer notes, mnemonics, reminders, or questions here...":"Sign in to save lesson notes."} className="mt-3 min-h-28 w-full resize-y rounded-lg border border-slate-300 bg-white p-3 text-sm leading-6 outline-none focus:border-indigo-500"/>
+      <div className="mt-2 flex justify-end"><button onClick={saveNote} disabled={!signedIn||noteSaving} className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white disabled:opacity-40"><Save size={14}/>{noteSaving?"Saving...":"Save note"}</button></div>
+    </section>
+
+    <div id="reviewer-content" onMouseUp={captureSelection}>
+
+    <section>
+      <ExamLesson content={current.content} highlights={highlights}/>
+    </section>
+    </div>
     {normalizeList(current.key_takeaways).length>0&&<section className="mt-6 border-2 border-slate-700 p-4"><h3 className="mb-2 text-[15px] font-extrabold text-slate-950">QUICK RECALL — REMEMBER THESE</h3><ul className="space-y-1.5 pl-5 text-[14px] leading-6 text-slate-900">{normalizeList(current.key_takeaways).map((x,i)=><li key={i} className="list-disc">{x}</li>)}</ul></section>}
     <div className="mt-7 flex justify-end border-t border-slate-300 pt-5"><button disabled={!!progressMap.get(current.id)?.completed_at} onClick={()=>markComplete(current.id)} className="rounded-lg bg-indigo-700 px-4 py-2.5 text-sm font-semibold text-white disabled:bg-emerald-600">{progressMap.get(current.id)?.completed_at?"Completed":"Mark Lesson Complete"}</button></div>
    </div></Card>:quizOpen&&isRizal?<Card className="p-6 sm:p-8"><div className="flex items-start justify-between gap-4"><div><div className="text-xs font-semibold uppercase tracking-wide text-indigo-600">Module Assessment</div><h2 className="mt-2 text-2xl font-bold">Life and Works of Rizal</h2><p className="mt-2 text-sm text-slate-500">Choose the best answer. Questions emphasize interpretation, application, and analysis rather than isolated recall.</p></div>{submitted&&<div className="rounded-2xl bg-indigo-50 px-5 py-3 text-center"><div className="text-2xl font-bold text-indigo-700">{score}/15</div><div className="text-xs text-slate-500">{Math.round(score/15*100)}%</div></div>}</div>
