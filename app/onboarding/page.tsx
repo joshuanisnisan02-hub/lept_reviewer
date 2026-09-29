@@ -72,36 +72,72 @@ export default function Onboarding() {
   }
 
   async function finish() {
-    if (!level || !program || !specializationId) return;
+    if (!level || !program || !specializationId) {
+      setNotice("Please complete your LEPT level and specialization before building your review path.");
+      return;
+    }
+
     setSaving(true);
     setNotice("");
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      setSaving(false);
-      setNotice("Your path is ready in demo mode. Sign in to save progress across devices.");
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+      if (userError || !user) {
+        setNotice("Your session could not be found. Please sign in again, then continue your setup.");
+        return;
+      }
+
+      const profileData = {
+        full_name: user.user_metadata?.full_name ?? user.email?.split("@")[0] ?? "Reviewee",
+        exam_level: level,
+        program,
+        specialization_id: specializationId,
+        target_exam_date: targetDate || null,
+        daily_study_minutes: minutes,
+        onboarding_completed: true,
+        updated_at: new Date().toISOString()
+      };
+
+      const { data: existing, error: lookupError } = await supabase
+        .from("profiles")
+        .select("user_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (lookupError) {
+        setNotice("Unable to check your reviewer profile: " + lookupError.message);
+        return;
+      }
+
+      const saveResult = existing
+        ? await supabase
+            .from("profiles")
+            .update(profileData)
+            .eq("user_id", user.id)
+        : await supabase
+            .from("profiles")
+            .insert({
+              user_id: user.id,
+              role: "learner",
+              ...profileData
+            });
+
+      if (saveResult.error) {
+        setNotice("Unable to save your review path: " + saveResult.error.message);
+        return;
+      }
+
       setStep(5);
-      return;
+    } catch (error) {
+      setNotice(
+        error instanceof Error
+          ? "Unable to save your review path: " + error.message
+          : "Unable to save your review path. Please try again."
+      );
+    } finally {
+      setSaving(false);
     }
-
-    const { error } = await supabase.from("profiles").upsert({
-      user_id: user.id,
-      full_name: user.user_metadata?.full_name ?? user.email?.split("@")[0] ?? "Reviewee",
-      exam_level: level,
-      program,
-      specialization_id: specializationId,
-      target_exam_date: targetDate || null,
-      daily_study_minutes: minutes,
-      onboarding_completed: true,
-      updated_at: new Date().toISOString()
-    }, { onConflict: "user_id" });
-
-    setSaving(false);
-    if (error) {
-      setNotice(error.message);
-      return;
-    }
-    setStep(5);
   }
 
   function canContinue() {
@@ -190,6 +226,8 @@ export default function Onboarding() {
             <button onClick={() => router.push("/dashboard")} className="rounded-xl border bg-white px-4 py-3 font-semibold">Go to Dashboard</button>
           </div>
         </>}
+
+        {step === 4 && notice && <div className="mt-5 rounded-xl bg-rose-50 p-3 text-sm leading-6 text-rose-700">{notice}</div>}
 
         {step < 5 && <div className="mt-8 flex justify-between">
           <button disabled={step === 0} onClick={() => setStep(Math.max(0, step - 1))} className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold text-slate-600 disabled:opacity-30"><ArrowLeft size={16}/> Back</button>
