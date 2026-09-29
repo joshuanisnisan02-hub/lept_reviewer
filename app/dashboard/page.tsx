@@ -30,7 +30,7 @@ export default async function Dashboard() {
     const [profileRes, planRes, masteryRes, attemptsRes, modulesRes, cardsRes, diagnosticRes] = await Promise.all([
       supabase.from("profiles").select("full_name,exam_level,program,target_exam_date,daily_study_minutes,onboarding_completed,diagnostic_completed,specializations(name)").eq("user_id", user.id).maybeSingle(),
       supabase.from("study_plan_items").select("id,title,estimated_minutes,status,item_type").eq("user_id", user.id).eq("scheduled_date", manilaDate()).order("priority", { ascending: false }),
-      supabase.from("competency_mastery").select("mastery_score,competencies(title,tos_weight)").eq("user_id", user.id).order("mastery_score", { ascending: true }).limit(5),
+      supabase.from("competency_mastery").select("competency_id,mastery_score,competencies(title,tos_weight,exam_area)").eq("user_id", user.id).order("mastery_score", { ascending: true }),
       supabase.from("question_attempts").select("id", { count: "exact", head: true }).eq("user_id", user.id),
       supabase.from("module_progress").select("module_id", { count: "exact", head: true }).eq("user_id", user.id).not("completed_at", "is", null),
       supabase.from("flashcard_reviews").select("flashcard_id", { count: "exact", head: true }).eq("user_id", user.id).gte("repetitions", 3),
@@ -50,9 +50,10 @@ export default async function Dashboard() {
   const displayName = profile?.full_name || user?.user_metadata?.full_name || demoProfile.name;
   const level = profile?.exam_level || demoProfile.level;
   const specialization = profile?.specializations?.name || profile?.program || demoProfile.specialization;
-  const realMasteryValues = mastery.map((x:any) => Number(x.mastery_score || 0));
-  const readiness = realMasteryValues.length
-    ? Math.round(realMasteryValues.reduce((a:number,b:number)=>a+b,0) / realMasteryValues.length)
+  const weightedMastery = mastery.map((x:any)=>({score:Number(x.mastery_score||0),weight:Number(x.competencies?.tos_weight||1)}));
+  const masteryWeightTotal = weightedMastery.reduce((sum:number,x:any)=>sum+x.weight,0);
+  const readiness = masteryWeightTotal
+    ? Math.round(weightedMastery.reduce((sum:number,x:any)=>sum+x.score*x.weight,0)/masteryWeightTotal)
     : signedIn ? 0 : demoProfile.readiness;
 
   const weakAreas = mastery.length
@@ -62,6 +63,18 @@ export default async function Dashboard() {
   const planItems = plan.length
     ? plan.map((x:any) => ({ done: x.status === "done", label: x.title, meta: x.estimated_minutes ? x.estimated_minutes + " min" : x.item_type }))
     : signedIn ? [] : demoPlan;
+  let recommendedHref="/study";
+  let recommendedTitle=weakAreas[0]?.name || next.title;
+  let recommendedMeta="Open the learning path";
+  if(user && mastery[0]?.competency_id){
+    const {data:map}=await supabase.from("module_competencies").select("module_id,modules(title,status,exam_level)").eq("competency_id",mastery[0].competency_id).limit(1).maybeSingle();
+    if(map?.module_id){
+      const {data:lesson}=await supabase.from("lessons").select("id,title,sequence").eq("module_id",map.module_id).eq("status","published").order("sequence").limit(1).maybeSingle();
+      recommendedTitle=map.modules?.title || recommendedTitle;
+      recommendedHref=lesson?.id?"/study/"+map.module_id+"?lesson="+lesson.id:"/study/"+map.module_id;
+      recommendedMeta=lesson?.title?"Start with Lesson "+lesson.sequence+": "+lesson.title:"Open this module";
+    }
+  }
 
   return <AppShell>
     <div className="mx-auto max-w-7xl p-5 sm:p-8">
@@ -89,11 +102,11 @@ export default async function Dashboard() {
             <p className="mt-2 max-w-2xl text-slate-600">Your mastery model has no assessment history yet. Start with a diagnostic so the platform can identify which competencies deserve priority.</p>
             <Link href="/practice?mode=diagnostic" className="mt-5 inline-flex items-center gap-2 rounded-xl bg-indigo-700 px-4 py-2.5 text-sm font-semibold text-white">Start Diagnostic <ArrowRight size={16}/></Link>
           </> : <>
-            <h2 className="mt-2 text-2xl font-bold">{weakAreas[0]?.name || next.title}</h2>
+            <h2 className="mt-2 text-2xl font-bold">{recommendedTitle}</h2>
             <p className="mt-2 text-slate-600">{signedIn ? "This is currently among your lowest-scoring tracked competencies." : next.competency}</p>
-            <div className="mt-4 text-sm text-slate-500">15 min review • 10 practice questions • 8 flashcards</div>
+            <div className="mt-4 text-sm text-slate-500">{recommendedMeta}</div>
             <div className="mt-5 flex flex-wrap gap-3">
-              <Link href="/study" className="inline-flex items-center gap-2 rounded-xl bg-indigo-700 px-4 py-2.5 text-sm font-semibold text-white">Start Review <ArrowRight size={16}/></Link>
+              <Link href={recommendedHref} className="inline-flex items-center gap-2 rounded-xl bg-indigo-700 px-4 py-2.5 text-sm font-semibold text-white">Start Review <ArrowRight size={16}/></Link>
               {latestDiagnostic?.id && <Link href={"/diagnostic/results?session=" + latestDiagnostic.id} className="inline-flex items-center gap-2 rounded-xl border bg-white px-4 py-2.5 text-sm font-semibold text-slate-700">View Diagnostic Results</Link>}
             </div>
           </>}
