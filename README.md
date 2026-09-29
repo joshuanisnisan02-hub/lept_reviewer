@@ -6,6 +6,10 @@ A modern LEPT study companion built around:
 
 ## Current build status
 
+**Current app version: 0.3.0**
+
+**Framework:** Next.js 15.5.26 + React 19
+
 ### Learner experience
 - Responsive Next.js + TypeScript + Tailwind foundation
 - Public landing page
@@ -18,11 +22,14 @@ A modern LEPT study companion built around:
 - Target examination date and realistic daily study target
 - Hybrid dashboard: demo data for guests, real profile/activity data for signed-in learners
 - Empty states for new accounts instead of fabricated performance
-- Learning path starter
-- Practice generator / quiz starter
-- Flashcards starter
-- Mistake-review starter
-- Progress view
+- Database-backed published learning path
+- Module reader with lesson completion tracking
+- Secure database-backed practice generator
+- Correct answers withheld until server-side submission
+- Automatic question exposure, mistake, and mastery updates
+- Database-backed spaced-repetition flashcards
+- Live mistake notebook with unresolved / improving / mastered states
+- Live progress analytics from learner activity
 - Live Sources & Alignment registry
 
 ### Data & adaptive foundations
@@ -35,6 +42,7 @@ A modern LEPT study companion built around:
 - Mistake recovery status
 - Competency mastery tracking
 - Automatic attempt-processing trigger
+- Secure private RPC cores with public invoker wrappers
 - Foreign-key indexes for scale
 - Protected admin/reviewer content access
 - Learner role escalation protection
