@@ -34,7 +34,7 @@ export default async function AdminPage() {
     supabase.from("sources").select("id,organization,document_title,status,last_checked_at,is_active").order("authority_level"),
     supabase.from("competencies").select("id,status").eq("exam_level","Secondary"),
     supabase.from("modules").select("id,status").eq("exam_level","Secondary"),
-    supabase.from("lessons").select("id,status").eq("exam_level","Secondary"),
+    supabase.from("lessons").select("id,status,modules!inner(exam_level)").eq("modules.exam_level","Secondary"),
     supabase.from("questions").select("id,verified,review_status").eq("exam_level","Secondary"),
     supabase.from("competencies").select("id,code,title,exam_level,exam_area,tos_weight,status,modules:module_competencies(modules(id,title,status)),questions(id,verified,review_status)").eq("exam_level","Secondary").order("exam_area").order("title")
   ]);
