@@ -55,10 +55,11 @@ export default function Practice() {
   const diagnostic = params.get("mode") === "diagnostic";
   const moduleId = params.get("module");
   const lessonId = params.get("lesson");
+  const requestedCount = Number(params.get("count") || "0");
   const supabase = createClient();
 
   const [coverage, setCoverage] = useState("All Subjects");
-  const [count, setCount] = useState(diagnostic ? 50 : 10);
+  const [count, setCount] = useState(diagnostic ? 50 : (requestedCount > 0 ? Math.min(Math.max(requestedCount,1),50) : 10));
   const [questions, setQuestions] = useState<PracticeQuestion[]>([]);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [index, setIndex] = useState(0);
