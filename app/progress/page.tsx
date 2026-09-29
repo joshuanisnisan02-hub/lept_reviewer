@@ -40,8 +40,15 @@ export default async function Progress() {
   const accuracy = attempts.length ? Math.round(correct/attempts.length*100) : 0;
   const studyMinutes = sessions.reduce((sum:number,x:any)=>sum + Number(x.duration_minutes ?? 0),0);
   const completedModules = modules.filter((x:any)=>x.completed_at).length;
-  const masteryValues = mastery.map((x:any)=>Number(x.mastery_score || 0));
-  const readiness = masteryValues.length ? Math.round(masteryValues.reduce((a:number,b:number)=>a+b,0)/masteryValues.length) : 0;
+  const weighted = mastery.map((x:any)=>({score:Number(x.mastery_score||0),weight:Number(x.competencies?.tos_weight||1)}));
+  const weightTotal = weighted.reduce((s:number,x:any)=>s+x.weight,0);
+  const readiness = weightTotal ? Math.round(weighted.reduce((s:number,x:any)=>s+(x.score*x.weight),0)/weightTotal) : 0;
+  const areaReadiness = ["General Education","Professional Education","Specialization"].map(area=>{
+    const rows=mastery.filter((x:any)=>x.competencies?.exam_area===area);
+    const total=rows.reduce((s:number,x:any)=>s+Number(x.competencies?.tos_weight||1),0);
+    const score=total?Math.round(rows.reduce((s:number,x:any)=>s+Number(x.mastery_score||0)*Number(x.competencies?.tos_weight||1),0)/total):0;
+    return {area,score};
+  });
   const unresolved = mistakes.filter((x:any)=>x.status==="unresolved").length;
   const masteredCards = cards.filter((x:any)=>Number(x.repetitions)>=3).length;
 
@@ -54,9 +61,10 @@ export default async function Progress() {
         <Card><Clock3 className="text-indigo-600"/><div className="mt-4 text-sm text-slate-500">Study Time</div><div className="mt-1 text-2xl font-bold">{Math.floor(studyMinutes/60)}h {studyMinutes%60}m</div></Card>
         <Card><Target className="text-indigo-600"/><div className="mt-4 text-sm text-slate-500">Question Accuracy</div><div className="mt-1 text-2xl font-bold">{accuracy}%</div><div className="mt-1 text-xs text-slate-500">{correct}/{attempts.length} correct</div></Card>
         <Card><Trophy className="text-indigo-600"/><div className="mt-4 text-sm text-slate-500">Modules Completed</div><div className="mt-1 text-2xl font-bold">{completedModules}</div></Card>
-        <Card><BarChart3 className="text-indigo-600"/><div className="mt-4 text-sm text-slate-500">Review Readiness</div><div className="mt-1 text-2xl font-bold">{readiness}%</div></Card>
+        <Card><BarChart3 className="text-indigo-600"/><div className="mt-4 text-sm text-slate-500">TOS-Weighted Readiness</div><div className="mt-1 text-2xl font-bold">{readiness}%</div></Card>
       </div>
 
+      <div className="mt-5 grid gap-3 sm:grid-cols-3">{areaReadiness.map(x=><Card key={x.area} className="shadow-none"><div className="text-sm text-slate-500">{x.area==="Specialization"?"Major in ICT":x.area}</div><div className="mt-1 text-2xl font-bold">{x.score}%</div></Card>)}</div>
       <div className="mt-5 grid gap-5 xl:grid-cols-[1.4fr_.6fr]">
         <Card>
           <h2 className="text-lg font-bold">Competency Mastery</h2>
