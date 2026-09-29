@@ -19,7 +19,7 @@ export default function Onboarding() {
   const router = useRouter();
   const supabase = createClient();
   const [step, setStep] = useState(0);
-  const [level, setLevel] = useState<"Elementary"|"Secondary"|null>(null);
+  const level: "Secondary" = "Secondary";
   const [specializations, setSpecializations] = useState<Specialization[]>([]);
   const [specializationId, setSpecializationId] = useState<string | null>(null);
   const [program, setProgram] = useState("");
@@ -33,6 +33,7 @@ export default function Onboarding() {
       .from("specializations")
       .select("id,exam_level,name,code,parent_id,guidance")
       .eq("active", true)
+      .eq("exam_level", "Secondary")
       .order("name")
       .then(({ data }) => setSpecializations((data ?? []) as Specialization[]));
   }, []);
@@ -72,7 +73,7 @@ export default function Onboarding() {
   }
 
   async function finish() {
-    if (!level || !program || !specializationId) {
+    if (!program || !specializationId) {
       setNotice("Please complete your LEPT level and specialization before building your review path.");
       return;
     }
@@ -128,7 +129,7 @@ export default function Onboarding() {
         return;
       }
 
-      setStep(5);
+      setStep(4);
     } catch (error) {
       setNotice(
         error instanceof Error
@@ -141,8 +142,7 @@ export default function Onboarding() {
   }
 
   function canContinue() {
-    if (step === 1) return !!level;
-    if (step === 2) return !!program && !!specializationId;
+    if (step === 1) return !!program && !!specializationId;
     return true;
   }
 
@@ -154,11 +154,11 @@ export default function Onboarding() {
             <div className="grid size-10 place-items-center rounded-xl bg-indigo-700 text-white"><GraduationCap size={20}/></div>
             <div><div className="font-bold">LEPT Review Hub</div><div className="text-xs text-slate-500">Personal review setup</div></div>
           </Link>
-          <div className="text-xs font-medium text-slate-500">Step {Math.min(step + 1, 5)} of 5</div>
+          <div className="text-xs font-medium text-slate-500">Step {Math.min(step + 1, 4)} of 4</div>
         </div>
 
         <div className="mb-8 flex gap-2">
-          {[0,1,2,3,4].map(i => <div key={i} className={"h-1.5 flex-1 rounded-full " + (i <= step ? "bg-indigo-600" : "bg-slate-200")} />)}
+          {[0,1,2,3].map(i => <div key={i} className={"h-1.5 flex-1 rounded-full " + (i <= step ? "bg-indigo-600" : "bg-slate-200")} />)}
         </div>
 
         {step === 0 && <>
@@ -170,17 +170,9 @@ export default function Onboarding() {
         </>}
 
         {step === 1 && <>
-          <h2 className="text-2xl font-bold">Which LEPT level are you preparing for?</h2>
-          <p className="mt-2 text-slate-500">Your available program or specialization options will change based on this selection.</p>
-          <div className="mt-6 grid gap-4 sm:grid-cols-2">
-            {(["Elementary","Secondary"] as const).map(x => <button key={x} onClick={() => { setLevel(x); setProgram(""); setSpecializationId(null); }} className={"rounded-2xl border p-5 text-left transition " + (level === x ? "border-indigo-600 bg-indigo-50 ring-1 ring-indigo-600" : "hover:border-slate-300")}>
-              <div className="font-bold">{x}</div>
-              <div className="mt-2 text-sm text-slate-500">{x === "Elementary" ? "For elementary-level examinees and aligned elementary programs." : "For secondary-level examinees and specialization tracks."}</div>
-            </button>)}
-          </div>
-        </>}
-
-        {step === 2 && <>
+          <div className="inline-flex rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">Secondary LEPT</div>
+          <h2 className="mt-4 text-2xl font-bold">Choose your major / specialization</h2>
+          <p className="mt-2 text-slate-500">This build currently focuses on Secondary LEPT examinees. Choose the field you will actually take.</p>
           <h2 className="text-2xl font-bold">Program / Specialization</h2>
           <p className="mt-2 text-slate-500">Choose the option that matches the field you will actually take in the LEPT.</p>
 
@@ -201,14 +193,14 @@ export default function Onboarding() {
           </div>}
         </>}
 
-        {step === 3 && <>
+        {step === 2 && <>
           <h2 className="text-2xl font-bold">When are you planning to take the LEPT?</h2>
           <p className="mt-2 text-slate-500">This will be used for your countdown and recommended weekly review load.</p>
           <input type="date" value={targetDate} onChange={e => setTargetDate(e.target.value)} className="mt-6 w-full rounded-xl border bg-white px-4 py-3" />
           <button onClick={() => setTargetDate("")} className="mt-3 text-sm font-semibold text-indigo-700">Not sure yet</button>
         </>}
 
-        {step === 4 && <>
+        {step === 3 && <>
           <h2 className="text-2xl font-bold">How much time can you realistically study?</h2>
           <p className="mt-2 text-slate-500">Choose a sustainable target. The planner can recalculate if you miss a day.</p>
           <div className="mt-6 grid gap-3 sm:grid-cols-2">
@@ -216,7 +208,7 @@ export default function Onboarding() {
           </div>
         </>}
 
-        {step === 5 && <>
+        {step === 4 && <>
           <div className="grid size-14 place-items-center rounded-full bg-emerald-50 text-emerald-600"><CheckCircle2 /></div>
           <h2 className="mt-5 text-2xl font-bold">Your review path is ready.</h2>
           <p className="mt-3 text-slate-600">{level} • {specializations.find(x => x.id === specializationId)?.name || program}</p>
@@ -227,11 +219,11 @@ export default function Onboarding() {
           </div>
         </>}
 
-        {step === 4 && notice && <div className="mt-5 rounded-xl bg-rose-50 p-3 text-sm leading-6 text-rose-700">{notice}</div>}
+        {step === 3 && notice && <div className="mt-5 rounded-xl bg-rose-50 p-3 text-sm leading-6 text-rose-700">{notice}</div>}
 
-        {step < 5 && <div className="mt-8 flex justify-between">
+        {step < 4 && <div className="mt-8 flex justify-between">
           <button disabled={step === 0} onClick={() => setStep(Math.max(0, step - 1))} className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold text-slate-600 disabled:opacity-30"><ArrowLeft size={16}/> Back</button>
-          {step < 4 ? <button disabled={!canContinue()} onClick={() => setStep(step + 1)} className="inline-flex items-center gap-2 rounded-xl bg-indigo-700 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-40">{step === 0 ? "Get Started" : "Continue"} <ArrowRight size={16}/></button>
+          {step < 3 ? <button disabled={!canContinue()} onClick={() => setStep(step + 1)} className="inline-flex items-center gap-2 rounded-xl bg-indigo-700 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-40">{step === 0 ? "Get Started" : "Continue"} <ArrowRight size={16}/></button>
             : <button disabled={saving} onClick={finish} className="inline-flex items-center gap-2 rounded-xl bg-indigo-700 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{saving ? "Saving..." : "Build My Review Path"} <ArrowRight size={16}/></button>}
         </div>}
       </div>
