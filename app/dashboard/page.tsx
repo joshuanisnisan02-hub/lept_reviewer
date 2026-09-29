@@ -70,7 +70,8 @@ export default async function Dashboard() {
     const {data:map}=await supabase.from("module_competencies").select("module_id,modules(title,status,exam_level)").eq("competency_id",mastery[0].competency_id).limit(1).maybeSingle();
     if(map?.module_id){
       const {data:lesson}=await supabase.from("lessons").select("id,title,sequence").eq("module_id",map.module_id).eq("status","published").order("sequence").limit(1).maybeSingle();
-      recommendedTitle=map.modules?.title || recommendedTitle;
+      const linkedModule=Array.isArray((map as any).modules)?((map as any).modules[0]??null):(map as any).modules;
+      recommendedTitle=linkedModule?.title || recommendedTitle;
       recommendedHref=lesson?.id?"/study/"+map.module_id+"?lesson="+lesson.id:"/study/"+map.module_id;
       recommendedMeta=lesson?.title?"Start with Lesson "+lesson.sequence+": "+lesson.title:"Open this module";
     }
