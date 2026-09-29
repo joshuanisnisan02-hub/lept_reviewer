@@ -57,7 +57,7 @@ export default async function AdminPage() {
     <div className="mx-auto max-w-7xl p-5 sm:p-8">
       <p className="text-sm font-semibold text-indigo-700">Content Administration</p>
       <h1 className="mt-1 text-3xl font-bold">TOS Coverage & Verification</h1>
-      <p className="mt-2 max-w-3xl text-slate-500">Use this area to confirm that current PRC competencies are covered before learner-facing content is published. Draft or unverified AI-generated content should remain outside normal learner mode.</p>
+      <p className="mt-2 max-w-3xl text-slate-500">Use this area to confirm that current PRC competencies are covered before learner-facing content is published. Draft or unverified authored content remains outside normal learner mode until approved.</p>\n      <Link href="/admin/content" className="mt-5 inline-flex rounded-xl bg-indigo-700 px-4 py-2.5 text-sm font-semibold text-white">Open Content Review Workspace</Link>
 
       <div className="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map(([label,value,Icon]) => <Card key={label}><Icon className="text-indigo-600"/><div className="mt-4 text-sm text-slate-500">{label}</div><div className="mt-1 text-3xl font-bold">{value}</div></Card>)}
@@ -65,7 +65,7 @@ export default async function AdminPage() {
 
       <div className="mt-6 grid gap-5 xl:grid-cols-[1.4fr_.6fr]">
         <Card className="overflow-hidden p-0">
-          <div className="border-b p-5"><h2 className="text-lg font-bold">TOS Coverage Matrix</h2><p className="mt-1 text-sm text-slate-500">Competencies will appear here after the official TOS extraction is loaded.</p></div>
+          <div className="border-b p-5"><h2 className="text-lg font-bold">TOS Coverage Matrix</h2><p className="mt-1 text-sm text-slate-500">Official PRC Professional Education competencies are now loaded. Question coverage will increase as reviewed items are published.</p></div>
           {coverage.length ? <div className="overflow-x-auto"><table className="w-full text-left text-sm">
             <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500"><tr><th className="px-5 py-3">Competency</th><th className="px-4 py-3">Area</th><th className="px-4 py-3">Weight</th><th className="px-4 py-3">Modules</th><th className="px-4 py-3">Verified Qs</th><th className="px-4 py-3">Status</th></tr></thead>
             <tbody className="divide-y">{coverage.map((row:any) => {
