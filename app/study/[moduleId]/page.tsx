@@ -146,10 +146,38 @@ function ReviewerSection({name,value,highlights}:{name:string;value:any;highligh
  </section>;
 }
 
+function StudyOutline({items,highlights}:{items:any[];highlights:HighlightRow[]}){
+ if(!Array.isArray(items)||!items.length)return null;
+ return <div className="columns-1 gap-10 xl:columns-2 [column-fill:balance]">
+  {items.map((section:any,i:number)=>{
+    const rows=Array.isArray(section?.items)?section.items:[];
+    if(!rows.length)return null;
+    return <section key={i} className="mb-7 break-inside-avoid">
+      <h3 className="text-[16px] font-extrabold uppercase tracking-tight text-slate-950">{section.title}</h3>
+      {section.subtitle&&<div className="mb-2 mt-0.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">{section.subtitle}</div>}
+      <div className="mt-2">
+        <ReviewerValue value={rows} highlights={highlights}/>
+      </div>
+    </section>;
+  })}
+ </div>;
+}
+
 function ExamLesson({content,highlights}:{content:any;highlights:HighlightRow[]}){
  if(!content)return null;
  if(typeof content!=="object"||Array.isArray(content))return <ReviewerValue value={content} highlights={highlights}/>;
- const keys=Object.keys(content);
+
+ const outline=Array.isArray(content.study_outline)?content.study_outline:null;
+ if(outline){
+  return <div>
+    {content.exam_coverage&&<ReviewerSection name="exam_coverage" value={content.exam_coverage} highlights={highlights}/>}
+    {content.overview&&<ReviewerSection name="overview" value={content.overview} highlights={highlights}/>}
+    <StudyOutline items={outline} highlights={highlights}/>
+    {content.review_checklist&&<ReviewerSection name="review_checklist" value={content.review_checklist} highlights={highlights}/>}
+  </div>;
+ }
+
+ const keys=Object.keys(content).filter(k=>k!=="study_outline");
  const ordered=[...LESSON_ORDER.filter(k=>keys.includes(k)),...keys.filter(k=>!LESSON_ORDER.includes(k))];
  return <div className="columns-1 gap-10 xl:columns-2 [column-fill:balance]">{ordered.map(k=><ReviewerSection key={k} name={k} value={content[k]} highlights={highlights}/>)}</div>;
 }
