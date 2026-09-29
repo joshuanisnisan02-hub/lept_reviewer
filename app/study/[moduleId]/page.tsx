@@ -32,11 +32,66 @@ const RIZAL_QUIZ:Question[]=[
 ];
 
 function normalizeList(v:any):string[]{return Array.isArray(v)?v.map(x=>typeof x==="string"?x:JSON.stringify(x)):[]}
-function ContentBlock({content}:{content:any}){
- if(!content)return null;if(typeof content==="string")return <p className="leading-7 text-slate-700">{content}</p>;
- if(Array.isArray(content))return <div className="space-y-3">{content.map((x,i)=><ContentBlock key={i} content={x}/>)}</div>;
- if(typeof content==="object")return <div className="space-y-5">{Object.entries(content).map(([k,v])=><section key={k}><h4 className="font-semibold capitalize text-slate-900">{k.replaceAll("_"," ")}</h4><div className="mt-2 text-sm">{Array.isArray(v)?<ul className="list-disc space-y-2 pl-5 text-slate-700">{v.map((x:any,i:number)=><li key={i}>{typeof x==="string"?x:JSON.stringify(x)}</li>)}</ul>:<ContentBlock content={v}/>}</div></section>)}</div>;
+
+const LESSON_ORDER=[
+ "exam_coverage","overview","must_know","core_discussion","principles","reading_skills","source_use","argumentation",
+ "purpose_audience_context","tone_and_register","formats","email_structure","special_purpose_principles","audience_adaptation",
+ "evaluation_questions","fact_opinion_inference","digital_communication","worked_examples","worked_example","examples","example",
+ "compare_and_distinguish","common_exam_trap","common_mistakes","lept_focus","exam_strategy"
+];
+
+const SECTION_META:Record<string,{title:string;kind:"intro"|"study"|"compare"|"example"|"trap"|"focus"}>={
+ exam_coverage:{title:"What You Need to Study for LEPT",kind:"intro"},
+ overview:{title:"Start Here",kind:"intro"},
+ must_know:{title:"Must Know",kind:"study"},
+ core_discussion:{title:"Core Lesson",kind:"study"},
+ principles:{title:"Core Principles",kind:"study"},
+ reading_skills:{title:"Reading Skills to Master",kind:"study"},
+ source_use:{title:"Using Sources Correctly",kind:"study"},
+ argumentation:{title:"Argument and Evidence",kind:"study"},
+ purpose_audience_context:{title:"Purpose, Audience, and Context",kind:"study"},
+ tone_and_register:{title:"Tone and Register",kind:"compare"},
+ formats:{title:"Professional Formats to Recognize",kind:"study"},
+ email_structure:{title:"Effective Email Structure",kind:"study"},
+ special_purpose_principles:{title:"Technical Communication Principles",kind:"study"},
+ audience_adaptation:{title:"Adapting to the Audience",kind:"study"},
+ evaluation_questions:{title:"Questions to Ask When Evaluating a Message",kind:"study"},
+ fact_opinion_inference:{title:"Compare: Fact, Opinion, and Inference",kind:"compare"},
+ digital_communication:{title:"Digital Communication",kind:"study"},
+ worked_examples:{title:"LEPT Application Examples",kind:"example"},
+ worked_example:{title:"LEPT Application Example",kind:"example"},
+ examples:{title:"LEPT Application Examples",kind:"example"},
+ example:{title:"LEPT Application Example",kind:"example"},
+ compare_and_distinguish:{title:"Do Not Confuse These",kind:"compare"},
+ common_exam_trap:{title:"Common Exam Traps",kind:"trap"},
+ common_mistakes:{title:"Common Exam Traps",kind:"trap"},
+ lept_focus:{title:"How This Appears in LEPT",kind:"focus"},
+ exam_strategy:{title:"How to Answer It in the Exam",kind:"focus"}
+};
+
+function HumanText({value}:{value:any}){
+ if(value==null)return null;
+ if(typeof value==="string")return <p className="text-[15px] leading-7 text-slate-700">{value}</p>;
+ if(Array.isArray(value))return <ul className="space-y-3">{value.map((x,i)=><li key={i} className="flex gap-3 text-[15px] leading-7 text-slate-700"><span className="mt-[11px] size-1.5 shrink-0 rounded-full bg-indigo-400"/><span>{typeof x==="string"?x:JSON.stringify(x)}</span></li>)}</ul>;
+ if(typeof value==="object")return <div className="space-y-3">{Object.entries(value).map(([k,v])=><div key={k}><div className="text-sm font-semibold capitalize text-slate-800">{k.replaceAll("_"," ")}</div><HumanText value={v}/></div>)}</div>;
  return null;
+}
+
+function LessonSection({name,value}:{name:string;value:any}){
+ const meta=SECTION_META[name]??{title:name.replaceAll("_"," ").replace(/\b\w/g,x=>x.toUpperCase()),kind:"study" as const};
+ const shell=meta.kind==="trap"?"border-amber-200 bg-amber-50/70":meta.kind==="focus"?"border-indigo-200 bg-indigo-50/70":meta.kind==="compare"?"border-sky-200 bg-sky-50/60":meta.kind==="example"?"border-emerald-200 bg-emerald-50/50":"border-slate-200 bg-white";
+ return <section className={"rounded-2xl border p-5 sm:p-6 "+shell}>
+  <h3 className="text-lg font-bold text-slate-950">{meta.title}</h3>
+  <div className="mt-3"><HumanText value={value}/></div>
+ </section>;
+}
+
+function ExamLesson({content}:{content:any}){
+ if(!content)return null;
+ if(typeof content!=="object"||Array.isArray(content))return <HumanText value={content}/>;
+ const keys=Object.keys(content);
+ const ordered=[...LESSON_ORDER.filter(k=>keys.includes(k)),...keys.filter(k=>!LESSON_ORDER.includes(k))];
+ return <div className="space-y-4">{ordered.map(k=><LessonSection key={k} name={k} value={content[k]}/>)}</div>;
 }
 
 export default function ModuleReader(){
@@ -84,8 +139,11 @@ export default function ModuleReader(){
 
    {!quizOpen&&current?<Card className="p-6 sm:p-8"><div className="flex justify-between gap-4"><div><div className="text-xs font-semibold uppercase tracking-wide text-indigo-600">Lesson {current.sequence}</div><h2 className="mt-2 text-2xl font-bold">{current.title}</h2></div>{current.estimated_minutes&&<div className="inline-flex items-center gap-2 text-sm text-slate-500"><Clock3 size={16}/>{current.estimated_minutes} min</div>}</div>
     {normalizeList(current.learning_objectives).length>0&&<section className="mt-7"><h3 className="text-lg font-bold">Learning Objectives</h3><ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-6 text-slate-700">{normalizeList(current.learning_objectives).map((x,i)=><li key={i}>{x}</li>)}</ul></section>}
-    <section className="mt-7"><h3 className="text-lg font-bold">Lesson</h3><div className="mt-4"><ContentBlock content={current.content}/></div></section>
-    {normalizeList(current.key_takeaways).length>0&&<section className="mt-7 rounded-2xl bg-slate-50 p-5"><h3 className="font-bold">Key Takeaways</h3><ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-6 text-slate-700">{normalizeList(current.key_takeaways).map((x,i)=><li key={i}>{x}</li>)}</ul></section>}
+    <section className="mt-7">
+      <div className="mb-4 flex items-center gap-3"><div className="h-px flex-1 bg-slate-200"/><span className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">Board Exam Review Lesson</span><div className="h-px flex-1 bg-slate-200"/></div>
+      <ExamLesson content={current.content}/>
+    </section>
+    {normalizeList(current.key_takeaways).length>0&&<section className="mt-7 rounded-2xl border border-violet-200 bg-violet-50/70 p-5"><h3 className="font-bold">Exam Takeaways — Remember These</h3><ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-6 text-slate-700">{normalizeList(current.key_takeaways).map((x,i)=><li key={i}>{x}</li>)}</ul></section>}
     <div className="mt-8 flex justify-end"><button disabled={!!progressMap.get(current.id)?.completed_at} onClick={()=>markComplete(current.id)} className="rounded-xl bg-indigo-700 px-4 py-2.5 text-sm font-semibold text-white disabled:bg-emerald-600">{progressMap.get(current.id)?.completed_at?"Completed":"Mark Lesson Complete"}</button></div>
    </Card>:quizOpen&&isRizal?<Card className="p-6 sm:p-8"><div className="flex items-start justify-between gap-4"><div><div className="text-xs font-semibold uppercase tracking-wide text-indigo-600">Module Assessment</div><h2 className="mt-2 text-2xl font-bold">Life and Works of Rizal</h2><p className="mt-2 text-sm text-slate-500">Choose the best answer. Questions emphasize interpretation, application, and analysis rather than isolated recall.</p></div>{submitted&&<div className="rounded-2xl bg-indigo-50 px-5 py-3 text-center"><div className="text-2xl font-bold text-indigo-700">{score}/15</div><div className="text-xs text-slate-500">{Math.round(score/15*100)}%</div></div>}</div>
     <div className="mt-7 space-y-7">{RIZAL_QUIZ.map((q,i)=><div key={i} className="border-b pb-7 last:border-0"><p className="font-semibold leading-6">{i+1}. {q.q}</p><div className="mt-3 grid gap-2">{q.choices.map((ch,j)=>{const chosen=answers[i]===j,correct=q.answer===j;return <button disabled={submitted} key={j} onClick={()=>setAnswers(a=>({...a,[i]:j}))} className={"rounded-xl border px-4 py-3 text-left text-sm "+(submitted&&correct?"border-emerald-400 bg-emerald-50":submitted&&chosen&&!correct?"border-rose-300 bg-rose-50":chosen?"border-indigo-500 bg-indigo-50":"hover:bg-slate-50")}><b className="mr-2">{String.fromCharCode(65+j)}.</b>{ch}</button>})}</div>{submitted&&<div className="mt-3 rounded-xl bg-slate-50 p-3 text-sm leading-6 text-slate-700"><b>Why:</b> {q.why}{answers[i]!==q.answer&&<button onClick={()=>{setQuizOpen(false);setActiveLesson(lessons.find(l=>l.sequence===q.lesson)?.id??null)}} className="ml-2 font-semibold text-indigo-700 underline">Review Lesson {q.lesson}</button>}</div>}</div>)}</div>
