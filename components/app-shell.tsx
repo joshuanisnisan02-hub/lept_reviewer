@@ -63,7 +63,7 @@ export function AppShell({children}:{children:React.ReactNode}) {
   const isAdmin=role==="admin";
   const isReviewer=role==="content_reviewer";
   const isStaff=isAdmin||isReviewer;
-  const visibleNav=isStaff?adminNav:learnerNav;
+  const visibleNav=authReady ? (isStaff?adminNav:learnerNav) : [];
 
   function isActive(href:string){
     if(href==="/admin")return path==="/admin";
@@ -72,22 +72,29 @@ export function AppShell({children}:{children:React.ReactNode}) {
 
   return <div className="min-h-screen">
     <aside className="fixed inset-y-0 left-0 hidden w-64 border-r bg-white p-5 lg:block">
-      <Link href={isStaff?"/admin":"/"} className="mb-8 flex items-center gap-3">
+      <Link href={authReady ? (isStaff?"/admin":"/") : "#"} className="mb-8 flex items-center gap-3">
         <div className="grid size-10 place-items-center rounded-xl bg-indigo-700 text-white"><GraduationCap/></div>
         <div>
           <b>LEPT Review Hub</b>
-          <div className="text-xs text-slate-500">{isStaff?"Administration":"Study with direction"}</div>
+          <div className="text-xs text-slate-500">{!authReady?"Loading account...":isStaff?"Administration":"Study with direction"}</div>
         </div>
       </Link>
 
-      {isStaff&&<div className="mb-2 px-3 text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">Administration</div>}
-      <nav className="space-y-1">
-        {visibleNav.map(([href,label,Icon])=><Link
+      {!authReady ? (
+        <div className="space-y-2" aria-label="Loading navigation">
+          <div className="mb-3 h-3 w-24 animate-pulse rounded bg-slate-200"/>
+          {[0,1,2].map(i=><div key={i} className="h-10 animate-pulse rounded-xl bg-slate-100"/>)}
+        </div>
+      ) : <>
+        {isStaff&&<div className="mb-2 px-3 text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">Administration</div>}
+        <nav className="space-y-1">
+          {visibleNav.map(([href,label,Icon])=><Link
           key={href}
           href={href}
           className={cn("flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100",isActive(href)&&"bg-indigo-50 text-indigo-700")}
-        ><Icon size={18}/>{label}</Link>)}
-      </nav>
+          ><Icon size={18}/>{label}</Link>)}
+        </nav>
+      </>}
 
       <div className="absolute bottom-5 left-5 right-5">
         {!authReady ? <div className="rounded-xl bg-slate-50 p-3 text-xs text-slate-400">Checking session...</div>
@@ -107,11 +114,11 @@ export function AppShell({children}:{children:React.ReactNode}) {
 
     <main className="pb-20 lg:ml-64 lg:pb-0">{children}</main>
 
-    <nav className={cn("fixed inset-x-0 bottom-0 z-20 grid border-t bg-white px-2 py-2 lg:hidden",isStaff?"grid-cols-3":"grid-cols-5")}>
+    {authReady&&<nav className={cn("fixed inset-x-0 bottom-0 z-20 grid border-t bg-white px-2 py-2 lg:hidden",isStaff?"grid-cols-3":"grid-cols-5")}>
       {isStaff ? adminNav.map(([href,label,Icon])=><Link key={href} href={href} className={cn("flex flex-col items-center gap-1 text-[11px] text-slate-600",isActive(href)&&"text-indigo-700")}><Icon size={19}/><span>{label==="Admin Dashboard"?"Admin":label==="Question Bank"?"Questions":"Content"}</span></Link>)
       : learnerNav.slice(0,4).map(([href,label,Icon])=><Link key={href} href={href} className={cn("flex flex-col items-center gap-1 text-[11px] text-slate-600",isActive(href)&&"text-indigo-700")}><Icon size={19}/><span>{label}</span></Link>).concat(
         <Link key="/mistakes" href="/mistakes" className={cn("flex flex-col items-center gap-1 text-[11px] text-slate-600",isActive("/mistakes")&&"text-indigo-700")}><NotebookTabs size={19}/><span>More</span></Link>
       )}
-    </nav>
+    </nav>}
   </div>;
 }
