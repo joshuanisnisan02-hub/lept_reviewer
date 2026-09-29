@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
 import { Card } from "@/components/ui";
@@ -22,6 +23,9 @@ const demoCards = [
 
 export default function Flashcards() {
   const supabase = createClient();
+  const params = useSearchParams();
+  const moduleId = params.get("module");
+  const lessonId = params.get("lesson");
   const [cards,setCards] = useState<CardRow[]>([]);
   const [index,setIndex] = useState(0);
   const [flip,setFlip] = useState(false);
@@ -41,9 +45,18 @@ export default function Flashcards() {
       return;
     }
 
-    const { data,error } = await supabase.rpc("get_due_flashcards", { p_limit: 30 });
-    if (error) setMessage(error.message);
-    setCards((data ?? []) as CardRow[]);
+    if (moduleId || lessonId) {
+      let query = supabase.from("flashcards").select("id,front,back,card_type").eq("status","published");
+      if (moduleId) query = query.eq("module_id",moduleId);
+      if (lessonId) query = query.eq("lesson_id",lessonId);
+      const {data,error}=await query.limit(30);
+      if(error)setMessage(error.message);
+      setCards((data??[]) as CardRow[]);
+    } else {
+      const { data,error } = await supabase.rpc("get_due_flashcards", { p_limit: 30 });
+      if (error) setMessage(error.message);
+      setCards((data ?? []) as CardRow[]);
+    }
     setGuest(false);
     setLoading(false);
   }
@@ -76,7 +89,7 @@ export default function Flashcards() {
 
   if (!cards.length) return <AppShell>
     <div className="mx-auto max-w-3xl p-5 sm:p-8">
-      <h1 className="text-3xl font-bold">Flashcards</h1>
+      <h1 className="text-3xl font-bold">Flashcards</h1><p className="mt-2 text-sm text-slate-500">{lessonId?"Lesson-linked review":moduleId?"Module-linked review":"Spaced review queue"}</p>
       <Card className="mt-7 text-center">
         <div className="mx-auto grid size-12 place-items-center rounded-full bg-indigo-50 text-indigo-700"><Brain/></div>
         <h2 className="mt-4 text-xl font-bold">Nothing due right now.</h2>
