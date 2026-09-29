@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { ArrowRight, BookOpenCheck } from "lucide-react";
 
 export default async function Study() {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
