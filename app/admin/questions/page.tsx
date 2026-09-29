@@ -25,7 +25,6 @@ export default function QuestionBankPage(){
   const [checked,setChecked]=useState<string[]>([]);
   const [search,setSearch]=useState("");
   const [status,setStatus]=useState("for_review");
-  const [level,setLevel]=useState("all");
   const [loading,setLoading]=useState(true);
   const [busy,setBusy]=useState(false);
   const [message,setMessage]=useState("");
@@ -44,11 +43,12 @@ export default function QuestionBankPage(){
       const [qRes,cRes]=await Promise.all([
         supabase.from("questions")
           .select("id,question,choice_a,choice_b,choice_c,choice_d,correct_answer,rationale,exam_level,exam_area,review_status,verified,difficulty,bloom_level,module_id,competency_id,modules(title),competencies(code,title),sources(organization,document_title)")
-          .eq("exam_area","Professional Education").order("created_at",{ascending:false}).limit(500),
+          .eq("exam_area","Professional Education").eq("exam_level","Secondary").order("created_at",{ascending:false}).limit(500),
         supabase.from("competencies")
           .select("id,code,title,exam_level")
           .eq("exam_area","Professional Education")
-          .order("exam_level").order("code")
+          .eq("exam_level","Secondary")
+          .order("code")
       ]);
       if(qRes.error)setMessage(qRes.error.message);
       const rows=(qRes.data??[]) as Q[]; setItems(rows); if(!selected&&rows.length)setSelected(rows[0].id);
@@ -59,11 +59,10 @@ export default function QuestionBankPage(){
 
   const visible=useMemo(()=>items.filter(q=>{
     if(status!=="all"&&q.review_status!==status)return false;
-    if(level!=="all"&&q.exam_level!==level)return false;
     const s=search.trim().toLowerCase();
     if(s&&!([q.question,q.modules?.title,q.competencies?.code,q.competencies?.title].filter(Boolean).join(" ").toLowerCase().includes(s)))return false;
     return true;
-  }),[items,status,level,search]);
+  }),[items,status,search]);
 
   const current=items.find(q=>q.id===selected)??null;
   const coverage=useMemo(()=>competencies.map(comp=>{
@@ -114,7 +113,7 @@ export default function QuestionBankPage(){
 
   return <AppShell><div className="mx-auto max-w-7xl p-5 sm:p-8">
     <Link href="/admin/content" className="inline-flex items-center gap-2 text-sm font-semibold text-indigo-700"><ArrowLeft size={15}/> Content Review</Link>
-    <div className="mt-5"><p className="text-sm font-semibold text-indigo-700">Professional Education</p><h1 className="text-3xl font-bold">Question Bank Review</h1><p className="mt-2 text-slate-500">Verify academic quality first. Only verified questions can be published to learner practice and diagnostics.</p></div>
+    <div className="mt-5"><p className="text-sm font-semibold text-indigo-700">Secondary • Professional Education</p><h1 className="text-3xl font-bold">Question Bank Review</h1><p className="mt-2 text-slate-500">Verify academic quality first. Only verified questions can be published to learner practice and diagnostics.</p></div>
 
     {message&&<div className="mt-5 rounded-xl bg-indigo-50 p-3 text-sm text-indigo-800">{message}</div>}
 
@@ -126,9 +125,9 @@ export default function QuestionBankPage(){
     </div>
 
     <Card className="mt-5">
-      <div className="grid gap-3 md:grid-cols-4">
+      <div className="grid gap-3 md:grid-cols-3">
         <div className="relative md:col-span-2"><Search size={16} className="absolute left-3 top-3.5 text-slate-400"/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search question, module, or TOS code" className="w-full rounded-xl border py-3 pl-9 pr-3 text-sm"/></div>
-        <select value={level} onChange={e=>setLevel(e.target.value)} className="rounded-xl border bg-white px-3 py-3 text-sm"><option value="all">All levels</option><option>Elementary</option><option>Secondary</option></select>
+        
         <select value={status} onChange={e=>setStatus(e.target.value)} className="rounded-xl border bg-white px-3 py-3 text-sm"><option value="all">All statuses</option><option value="draft">Draft</option><option value="for_review">For review</option><option value="verified">Verified</option><option value="published">Published</option></select>
       </div>
     </Card>
