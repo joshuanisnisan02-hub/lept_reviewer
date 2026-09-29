@@ -66,11 +66,11 @@ export default function AdminContentPage(){
         supabase.from("flashcards").select("id,front,back,status,modules(title)").order("created_at",{ascending:false}).limit(100)
       ]);
       setModules((m.data??[]) as ModuleRow[]);
-      setLessons((l.data??[]) as LessonRow[]);
+      setLessons((l.data??[]).map((row:any)=>({...row,modules:Array.isArray(row.modules)?(row.modules[0]??null):row.modules})) as LessonRow[]);
       setCompetencies((c.data??[]) as CompetencyRow[]);
       setSources((s.data??[]) as SourceRow[]);
-      setQuestions((q.data??[]) as QuestionRow[]);
-      setFlashcards((f.data??[]) as FlashcardRow[]);
+      setQuestions((q.data??[]).map((row:any)=>({...row,modules:Array.isArray(row.modules)?(row.modules[0]??null):row.modules})) as QuestionRow[]);
+      setFlashcards((f.data??[]).map((row:any)=>({...row,modules:Array.isArray(row.modules)?(row.modules[0]??null):row.modules})) as FlashcardRow[]);
     }
     setLoading(false);
   }
