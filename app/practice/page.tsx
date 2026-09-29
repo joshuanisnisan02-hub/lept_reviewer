@@ -53,6 +53,8 @@ export default function Practice() {
   const params = useSearchParams();
   const router = useRouter();
   const diagnostic = params.get("mode") === "diagnostic";
+  const moduleId = params.get("module");
+  const lessonId = params.get("lesson");
   const supabase = createClient();
 
   const [coverage, setCoverage] = useState("All Subjects");
@@ -135,16 +137,30 @@ export default function Practice() {
       coverage === "Specialization" ? "Specialization" :
       null;
 
-    const { data, error } = await supabase.rpc("get_practice_questions", {
-      p_limit: count,
-      p_exam_area: area,
-      p_specialization_id: profile?.specialization_id ?? null
-    });
+    let rows:DbQuestion[]=[];
+    let queryError:any=null;
+    if(moduleId||lessonId){
+      let query=supabase.from("questions")
+        .select("id,question,choice_a,choice_b,choice_c,choice_d,exam_area,difficulty,question_type")
+        .eq("review_status","published").eq("verified",true);
+      if(moduleId)query=query.eq("module_id",moduleId);
+      if(lessonId)query=query.eq("lesson_id",lessonId);
+      const scoped=await query.limit(count);
+      rows=(scoped.data??[]) as DbQuestion[];
+      queryError=scoped.error;
+    }else{
+      const scoped=await supabase.rpc("get_practice_questions", {
+        p_limit: count,
+        p_exam_area: area,
+        p_specialization_id: profile?.specialization_id ?? null
+      });
+      rows=(scoped.data??[]) as DbQuestion[];
+      queryError=scoped.error;
+    }
 
-    if (error) {
-      setMessage(error.message);
+    if (queryError) {
+      setMessage(queryError.message);
     } else {
-      const rows = (data ?? []) as DbQuestion[];
       setQuestions(rows.map(q => ({
         id: q.id,
         question: q.question,
@@ -153,7 +169,9 @@ export default function Practice() {
       })));
 
       if (!rows.length) {
-        setMessage("No verified questions are published for this coverage yet. The question bank will populate as official TOS-aligned content is reviewed and approved.");
+        setMessage(moduleId||lessonId
+          ?"This lesson does not have reviewed and published LEPT-style practice items yet. Questions remain unavailable until they pass the content-review workflow."
+          :"No verified questions are published for this coverage yet. The question bank will populate as official TOS-aligned content is reviewed and approved.");
       }
     }
     setLoading(false);
